@@ -1,0 +1,14 @@
+[project]
+name = "learn-bt"
+version = "0.1.0"
+description = "Braintrust enablement workshop: a Sales Assistant agent and hands-on exercises"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "autoevals>=0.3.0",
+    "braintrust>=0.30.1",
+    "openai>=2.48.0",
+    "pillow>=12.3.0",
+    "pydantic-ai>=2.16.0",
+    "python-dotenv>=1.2.2",
+]
