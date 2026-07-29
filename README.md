@@ -12,8 +12,7 @@ exercise is a scaled down version of a real workflow applied to the agent, so th
 ## The agent
 
 The Sales Assistant helps an account team prepare for and follow up on customer
-conversations. It is deliberately simple so the focus stays on instrumentation and
-evaluation.
+conversations.
 
 ```
 agent/

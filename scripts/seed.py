@@ -1,13 +1,15 @@
 """Seed the agent with realistic traffic.
 
-This script generates a set of realistic Sales Assistant requests with an LLM,
-then runs the agent on each one. Once you have instrumented the agent with
-Braintrust tracing (section 2), running this populates your project's logs with
-varied traces you can query, cluster, and analyze in later sections.
+For each request the script randomly picks a fixture object (an account or an
+opportunity), asks an LLM to write the single request an
+account executive might type about it, then runs the agent on that request. Once
+you have instrumented the agent with Braintrust tracing (section 2), running this
+populates your project's logs with varied traces you can query, cluster, and
+analyze in later sections.
 
-Some requests arrive with an attachment: the script renders a short "customer
-message" into a PNG and passes it to the agent as multimodal input, so you have
-traces that exercise attachment logging.
+Some requests arrive with an attachment: the LLM also drafts a short "customer
+message", which the script renders as either a text PDF or a PNG and passes to
+the agent as input, so you have traces that exercise attachment logging.
 
 Usage:
     uv run python -m scripts.seed --count 20
@@ -22,60 +24,74 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import textwrap
 from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from PIL import Image, ImageDraw
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
 
 from agent.agent import run_agent
+from agent.fixtures import ACCOUNTS, OPPORTUNITIES
 
 load_dotenv()
 
 SCRATCH_DIR = Path(__file__).parent / ".seed_attachments"
 
-# A compact description of what lives in the fixtures, so the generator produces
-# requests that actually hit the tools instead of asking about unknown accounts.
-FIXTURE_CONTEXT = """
-Accounts: Northwind Trading (ACC-1001, logistics, EU expansion, data residency),
-Halcyon Health (ACC-1002, healthcare, needs HIPAA), Bright Peak Media (ACC-1003,
-media, champion left).
-Opportunities: OPP-5001 (Northwind EU expansion, Negotiation), OPP-5002 (Halcyon
-upsell, Proposal), OPP-5003 (Bright Peak renewal, Discovery).
-Knowledge base covers: pricing and discounts, security/HIPAA/data residency,
-onboarding timelines, competitive positioning.
-"""
+# Each fixture kind gets a short framing of what an AE would be doing with it, so
+# the generated request reads like a real ask rather than a bare data dump.
+FIXTURE_KINDS = {
+    "account": (
+        ACCOUNTS,
+        "You need to do something with this CRM account (review it, update a "
+        "field, prep for a call, draft an email to the contact, etc.).",
+    ),
+    "opportunity": (
+        OPPORTUNITIES,
+        "You are working this opportunity and want to move it forward (check its "
+        "status, update the next step, draft an update, ask what to do next, etc.).",
+    ),
+}
 
-GENERATOR_SYSTEM = """You generate realistic requests that an account executive
-would type to a Sales Assistant agent. The agent can look up accounts and
-opportunities, search a knowledge base, draft emails, and update CRM records.
+GENERATOR_SYSTEM = """You generate a realistic request that an account
+executive would type to a Sales Assistant agent. The agent can look up accounts
+and opportunities, search a knowledge base, draft emails, and update CRM records.
 
-Return a JSON object with a "requests" array. Each item has:
+You are given one piece of context the AE is currently focused on. Write the
+request as if the AE has that context in front of them: they can reference it by
+name or id, and their ask should plausibly require the assistant to look it up or
+act on it. Keep it to one or two sentences and make it sound like a busy person
+typing quickly.
+
+Return a JSON object with:
   - "prompt": the AE's request (one or two sentences).
-  - "needs_attachment": boolean. True for a few requests where the AE forwards a
-    customer message.
-  - "attachment_text": if needs_attachment is true, the short customer message to
-    render as an image (2-4 sentences); otherwise null.
-
-Make the set diverse: some reference specific accounts or opportunities, some ask
-for emails to be drafted, some ask about pricing or security. Include a couple of
-vague or underspecified requests so the agent has to cope with ambiguity.
+  - "attachment_text": when asked to include an attachment, generate content for
+  that attachment here. This attachment will be a customer message. Make it relevant 
+  to the prompt context; otherwise null.
 """
 
 
-def generate_requests(count: int, attachment_ratio: float, model: str) -> list[dict]:
-    """Ask an LLM for `count` realistic requests grounded in the fixtures."""
-    # Routes through the Braintrust gateway, same as the agent, so only
-    # BRAINTRUST_API_KEY is required.
-    client = OpenAI(
-        base_url="https://gateway.braintrust.dev",
-        api_key=os.environ["BRAINTRUST_API_KEY"],
+def _generate_request(
+    client: OpenAI, model: str, fixture_kind: str, fixture: dict, with_attachment: bool
+) -> dict:
+    """Ask the LLM for one request grounded in a single fixture object."""
+    _, framing = FIXTURE_KINDS[fixture_kind]
+    attachment_clause = (
+        "The AE is forwarding a customer message, so include attachment_text."
+        if with_attachment
+        else "No attachment for this one; set attachment_text to null."
     )
     instruction = textwrap.dedent(
-        f"""Generate {count} requests. About {round(attachment_ratio * 100)}% should
-        set needs_attachment to true. Ground them in this data:
-        {FIXTURE_CONTEXT}"""
+        f"""Generate a request. Context ({fixture_kind}): {framing}
+
+        Here are the details:
+        {json.dumps(fixture, indent=2)}
+
+        {attachment_clause}"""
     )
     resp = client.chat.completions.create(
         model=model,
@@ -85,36 +101,48 @@ def generate_requests(count: int, attachment_ratio: float, model: str) -> list[d
             {"role": "user", "content": instruction},
         ],
     )
-    data = json.loads(resp.choices[0].message.content or "{}")
-    requests = data.get("requests", [])
-    return requests[:count]
+    return json.loads(resp.choices[0].message.content or "{}")
 
 
-def _render_message(text: str) -> Image.Image:
-    """Draw a short customer message onto an image."""
+def _render_pdf(text: str, path: Path) -> None:
+    """Render a customer message as a real (text-based, selectable) PDF."""
+    c = canvas.Canvas(str(path), pagesize=LETTER)
+    width, height = LETTER
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(inch, height - inch, "Customer message")
+    c.setFont("Helvetica", 12)
+    y = height - inch - 0.5 * inch
+    for line in textwrap.wrap(text, width=80):
+        c.drawString(inch, y, line)
+        y -= 0.28 * inch
+    c.showPage()
+    c.save()
+
+
+def _render_png(text: str, path: Path) -> None:
+    """Draw a short customer message onto a PNG image."""
     width, height = 600, 320
     img = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(img)
     draw.rectangle([0, 0, width, 40], fill=(37, 99, 235))
     draw.text((16, 12), "Customer message", fill="white")
     draw.text((16, 60), textwrap.fill(text, width=64), fill=(20, 20, 20))
-    return img
+    img.save(path)
 
 
 def render_attachment(text: str, index: int) -> Path:
-    """Render a customer message as an attachment, alternating PNG and PDF.
+    """Render a customer message as an attachment, alternating PDF and PNG.
 
-    Later exercises log both image and PDF attachments, so the seed set includes
-    both formats.
+    Later exercises log both text (PDF) and image (PNG) attachments, so the seed
+    set includes both formats.
     """
     SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
-    img = _render_message(text)
     if index % 2 == 0:
         path = SCRATCH_DIR / f"message_{index:02d}.pdf"
-        img.save(path, "PDF", resolution=100.0)
+        _render_pdf(text, path)
     else:
         path = SCRATCH_DIR / f"message_{index:02d}.png"
-        img.save(path)
+        _render_png(text, path)
     return path
 
 
@@ -124,19 +152,38 @@ def main() -> None:
     parser.add_argument("--attachment-ratio", type=float, default=0.2,
                         help="Fraction of requests that include an attachment (0-1).")
     parser.add_argument("--model", default="gpt-4o-mini", help="Model used to generate requests.")
+    parser.add_argument("--seed", type=int, default=None, help="Optional RNG seed for reproducibility.")
     args = parser.parse_args()
 
-    print(f"Generating {args.count} requests...")
-    requests = generate_requests(args.count, args.attachment_ratio, args.model)
+    rng = random.Random(args.seed)
 
-    for i, req in enumerate(requests, start=1):
+    # Routes through the Braintrust gateway, same as the agent, so only
+    # BRAINTRUST_API_KEY is required.
+    client = OpenAI(
+        base_url="https://gateway.braintrust.dev",
+        api_key=os.environ["BRAINTRUST_API_KEY"],
+    )
+
+    print(f"Generating and running {args.count} requests...")
+    for i in range(1, args.count + 1):
+        fixture_kind = rng.choice(list(FIXTURE_KINDS))
+        fixtures = FIXTURE_KINDS[fixture_kind][0]
+        fixture = rng.choice(list(fixtures.values()))
+        with_attachment = rng.random() < args.attachment_ratio
+
+        try:
+            req = _generate_request(client, args.model, fixture_kind, fixture, with_attachment)
+        except Exception as exc:  # keep seeding even if generation fails
+            print(f"[{i}/{args.count}] generation failed: {exc}")
+            continue
+
         prompt = req.get("prompt", "")
-        attachments = None
-        if req.get("needs_attachment") and req.get("attachment_text"):
+        attachments : list[str | Path] | None = None
+        if with_attachment and req.get("attachment_text"):
             attachments = [render_attachment(req["attachment_text"], i)]
 
         label = "with attachment" if attachments else "text only"
-        print(f"[{i}/{len(requests)}] ({label}) {prompt[:70]}")
+        print(f"[{i}/{args.count}] ({fixture_kind}, {label}) {prompt[:70]}")
         try:
             result = run_agent(prompt, attachments=attachments)
             for write in result.writes:
