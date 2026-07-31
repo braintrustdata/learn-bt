@@ -6,6 +6,43 @@ Everything is in-memory so the agent is easy to run and reason about. The tools
 in ``tools.py`` read from (and pretend to write to) these dictionaries.
 """
 
+import re
+
+def find_accounts(query: str) -> list[dict]:
+    """Return accounts whose id or name loosely matches the query."""
+    q = query.strip().lower()
+    return [
+        acct
+        for acct in ACCOUNTS.values()
+        if q in acct["id"].lower() or q in acct["name"].lower()
+    ]
+
+def search_docs(query: str) -> list[dict]:
+    """Return knowledge base docs matching the query in title, tags, or body.
+
+    Matches on individual query terms rather than the whole query string, so
+    natural-language queries (e.g. "what is our pricing policy") still hit docs
+    that contain the meaningful words ("pricing", "policy").
+    """
+    stopwords = {
+        "the", "a", "an", "and", "or", "of", "to", "is", "are", "our", "we",
+        "do", "how", "what", "for", "in", "on", "with", "does", "can", "us",
+        "you", "your",
+    }
+    terms = [
+        t for t in re.findall(r"[a-z0-9]+", query.lower())
+        if len(t) >= 3 and t not in stopwords
+    ]
+    hits = []
+    for doc in KNOWLEDGE_BASE.values():
+        words = set(re.findall(
+            r"[a-z0-9]+",
+            " ".join([doc["title"], " ".join(doc["tags"]), doc["body"]]).lower(),
+        ))
+        if any(term in words for term in terms):
+            hits.append(doc)
+    return hits
+
 # ---------------------------------------------------------------------------
 # CRM accounts (what `lookup_customer` searches)
 # ---------------------------------------------------------------------------
@@ -237,23 +274,3 @@ KNOWLEDGE_BASE = {
     },
 }
 
-
-def find_accounts(query: str) -> list[dict]:
-    """Return accounts whose id or name loosely matches the query."""
-    q = query.strip().lower()
-    return [
-        acct
-        for acct in ACCOUNTS.values()
-        if q in acct["id"].lower() or q in acct["name"].lower()
-    ]
-
-
-def search_docs(query: str) -> list[dict]:
-    """Return knowledge base docs matching the query in title, tags, or body."""
-    q = query.strip().lower()
-    hits = []
-    for doc in KNOWLEDGE_BASE.values():
-        haystack = " ".join([doc["title"], " ".join(doc["tags"]), doc["body"]]).lower()
-        if q in haystack:
-            hits.append(doc)
-    return hits

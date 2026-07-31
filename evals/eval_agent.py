@@ -1,7 +1,7 @@
 """Eval for the Sales Assistant (exercise 4.3).
 
-Write an eval that runs the agent over the dataset you curated in 4.1 and scores
-it with the scorers you pushed in 4.2. Run with:
+Run the agent over the `email-drafting` dataset from 4.1 and grade each drafted
+email with the scorers from 4.2. Run with:
 
     bt eval evals/eval_agent.py
 
@@ -12,7 +12,18 @@ exercises/3-evals/03-executing-an-eval.solution.md.
 import sys
 from pathlib import Path
 
-# Make the repo root importable so `agent` resolves when run from anywhere.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Place local imports below here
 
-# TODO: build the eval (load the dataset, use run_agent as the task, add scorers).
+
+# def task(input):
+#     TODO
+#     pass
+#
+# Eval(
+#     PROJECT,
+#     experiment_name="email-drafting-eval",
+#     data=[],
+#     task=task,
+#     scores=[valid_email, email_goal_reached], #type: ignore
+# )

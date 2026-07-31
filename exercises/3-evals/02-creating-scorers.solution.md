@@ -1,96 +1,130 @@
 # Solution: Create scorers
 
-Full implementation for `evals/scorers.py`:
-
 ```python
+import os
+
 import braintrust
 from autoevals import LLMClassifier
+from dotenv import load_dotenv
+from openai import OpenAI
 from pydantic import BaseModel
 
-project = braintrust.projects.create(name="sales-assistant")
+load_dotenv()
+
+project = braintrust.projects.create(name="learn-bt")  # Idempotent operation
+
+# This example uses the Braintrust Gateway for LLM calls. This judge client is
+# provided as reference to use as the client for the LLM Judge
+judge_client = OpenAI(
+    base_url=os.getenv("BRAINTRUST_AI_GATEWAY_URL") or "https://gateway.braintrust.dev",
+    api_key=os.environ["BRAINTRUST_API_KEY"],
+    default_headers={"x-bt-org-name": os.getenv("BRAINTRUST_ORG_NAME", "")},
+)
 
 
-# --- Code-based scorer -----------------------------------------------------
-class LengthParams(BaseModel):
-    output: str
+# --- Code scorer -----------------------------------------------------------
+class TraceParams(BaseModel):
+    trace: dict
 
 
-def within_length_budget(output: str):
-    """Reward concise answers. Full credit under 800 characters."""
-    length = len(output or "")
-    if length == 0:
-        return {"score": 0.0, "metadata": {"length": 0, "reason": "empty output"}}
-    score = 1.0 if length <= 800 else max(0.0, 1.0 - (length - 800) / 800)
-    return {"score": score, "metadata": {"length": length}}
+async def valid_email(trace=None):
+    """Assert the drafted email is addressed to a real, non-placeholder recipient."""
+    
+    PLACEHOLDER_DOMAINS = {"example.com", "example.org", "example.net"}
+    
+    if not trace:
+        return None
+
+    tool_spans = await trace.get_spans(span_type=["tool"])
+    draft = next(
+        (s for s in tool_spans if (s.span_attributes or {}).get("name") == "draft_email"),
+        None,
+    )
+    if not draft:
+        return None
+
+    recipient = draft.output["email"].get("recipient", "")
+    if "@" not in recipient:
+        return 0
+    domain = recipient.split("@")[-1].lower()
+    return 0 if domain in PLACEHOLDER_DOMAINS else 1
 
 
 # --- LLM-judge scorer ------------------------------------------------------
-_quality_classifier = LLMClassifier(
-    name="response_quality",
-    prompt_template="""You are grading a Sales Assistant's reply to an account executive.
+scorer_prompt = """
+An account executive made this request:
+{{input.prompt}}
 
-Request:
-{{input}}
+The assistant drafted this email in response:
+Subject: {{output.subject}}
+Body: {{output.body}}
 
-Reply:
-{{output}}
+Does the drafted email address the request?
+The email must specifically fully address the requested action, and not just repeat the request.
 
-Grade the reply on whether it is helpful and grounded. A good reply addresses the
-request and does not invent account details, pricing, or security commitments.
+Y: yes
+N: no
+"""
 
-G: helpful and grounded
-P: partially helpful, or mixes in unsupported claims
-B: unhelpful, or clearly invents facts
-
-Answer:""",
-    choice_scores={"G": 1.0, "P": 0.5, "B": 0.0},
+email_goal_reached_scorer = LLMClassifier(
+    name="Email Goal Reached",
+    prompt_template=scorer_prompt,
+    choice_scores={"Y": 1, "N": 0},
     use_cot=True,
+    client=judge_client,
 )
 
 
-class ResponseQualityParams(BaseModel):
-    input: str
-    output: str
+class JudgeParams(BaseModel):
+    input: dict
+    trace: dict
 
 
-def response_quality(input: str, output: str):
-    return _quality_classifier(input=input, output=output)
+async def email_goal_reached(input=None, trace=None):
+    """Grade whether the drafted email addresses the request."""
+    if not trace:
+        return None
 
+    tool_spans = await trace.get_spans(span_type=["tool"])
+    draft = next(
+        (s for s in tool_spans if (s.span_attributes or {}).get("name") == "draft_email"),
+        None,
+    )
+    if not draft:
+        return None
+
+    return email_goal_reached_scorer(input=input, output=draft.output["email"])
 
 # --- Register for push -----------------------------------------------------
 project.scorers.create(
-    name="Within length budget",
-    slug="within-length-budget",
-    description="Deterministic: reward concise answers.",
-    parameters=LengthParams,
-    handler=within_length_budget,
-    metadata={"__pass_threshold": 0.5},
+    name="Valid email",
+    slug="valid-email",
+    parameters=TraceParams,
+    handler=valid_email,
 )
 
 project.scorers.create(
-    name="Response quality",
-    slug="response-quality",
-    description="LLM judge: is the reply helpful and grounded?",
-    parameters=ResponseQualityParams,
-    handler=response_quality,
-    metadata={"__pass_threshold": 0.5},
+    name="Email Goal Reached",
+    slug="email-goal-reached",
+    parameters=JudgeParams,
+    handler=email_goal_reached,
 )
+
 ```
 
-Push:
+Push to Braintrust:
 
 ```bash
 cd evals
 bt functions push scorers.py
 ```
 
+Verify these scorers show up in the Braintrust project.
+
 ## Notes
 
-- The code scorer is cheap and deterministic, good for hard rules. The LLM judge
-  captures fuzzy quality; `use_cot=True` makes it reason before choosing, which
-  improves reliability. Its model call routes through the gateway.
-- `project.scorers.create(...)` registers each scorer for the push. The Pydantic
-  `parameters` model declares what the scorer receives.
-- Braintrust bundles `autoevals`, `braintrust`, `openai`, `pydantic`, and
-  `requests` by default. For other packages, pass `--requirements`.
-- `__pass_threshold` sets the score at or above which a row counts as passing.
+- **Both scorers filter the trace to the drafted email.** The agent's output is
+  its final reply, not the email object, so each scorer takes the run's `trace`,
+  fetches the `tool` spans with `await trace.get_spans(span_type=["tool"])`, picks the one named `draft_email`, and grades `draft.output["email"]` 
+- `parameters` is a Pydantic model declaring what the scorer receives, required for `project.scorers.create(...)` to push.
+- For successive push commands, use `--if-exists replace` flag to push a new version.

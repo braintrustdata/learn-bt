@@ -14,6 +14,7 @@ the agent as input, so you have traces that exercise attachment logging.
 Usage:
     uv run python -m scripts.seed --count 20
     uv run python -m scripts.seed --count 20 --attachment-ratio 0.3
+    uv run python -m scripts.seed --count 20 --concurrency 4
 
 Requires BRAINTRUST_API_KEY (a .env file is loaded if present). All model calls
 route through the Braintrust gateway, so no provider-specific key is needed.
@@ -26,6 +27,7 @@ import json
 import os
 import random
 import textwrap
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,6 +38,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from agent.agent import run_agent
+from agent.config import BASE_URL
 from agent.fixtures import ACCOUNTS, OPPORTUNITIES
 
 load_dotenv()
@@ -146,6 +149,30 @@ def render_attachment(text: str, index: int) -> Path:
     return path
 
 
+def _seed_one(
+    client: OpenAI, args: argparse.Namespace, fixture_kind: str, fixture: dict,
+    with_attachment: bool, i: int, total: int,
+) -> None:
+    """Generate a single request and run the agent on it."""
+    try:
+        req = _generate_request(client, args.model, fixture_kind, fixture, with_attachment)
+    except Exception as exc:  # keep seeding even if generation fails
+        print(f"[{i}/{total}] generation failed: {exc}")
+        return
+
+    prompt = req.get("prompt", "")
+    attachments : list[Path] = []
+    if with_attachment and req.get("attachment_text"):
+        attachments = [render_attachment(req["attachment_text"], i)]
+
+    label = "with attachment" if attachments else "text only"
+    print(f"[{i}/{total}] ({fixture_kind}, {label}) {prompt}")
+    try:
+        run_agent(prompt, attachments=attachments) #type: ignore
+    except Exception as exc:  # keep seeding even if one run fails
+        print(f"    run failed: {exc}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed the Sales Assistant with traffic.")
     parser.add_argument("--count", type=int, default=10, help="Number of traces to seed.")
@@ -153,43 +180,47 @@ def main() -> None:
                         help="Fraction of requests that include an attachment (0-1).")
     parser.add_argument("--model", default="gpt-4o-mini", help="Model used to generate requests.")
     parser.add_argument("--seed", type=int, default=None, help="Optional RNG seed for reproducibility.")
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="Number of requests to generate and run concurrently.")
     args = parser.parse_args()
+
+    if args.concurrency < 1:
+        parser.error("--concurrency must be at least 1")
 
     rng = random.Random(args.seed)
 
-    # Routes through the Braintrust gateway, same as the agent, so only
-    # BRAINTRUST_API_KEY is required.
+    # Routes through BASE_URL (the Braintrust gateway by default), same as the
+    # agent, so only BRAINTRUST_API_KEY is required.
     client = OpenAI(
-        base_url="https://gateway.braintrust.dev",
+        base_url=BASE_URL,
         api_key=os.environ["BRAINTRUST_API_KEY"],
     )
 
-    print(f"Generating and running {args.count} requests...")
+    # Draw all random choices up front on the single RNG so that a given --seed
+    # produces the same workload regardless of --concurrency.
+    jobs = []
     for i in range(1, args.count + 1):
         fixture_kind = rng.choice(list(FIXTURE_KINDS))
         fixtures = FIXTURE_KINDS[fixture_kind][0]
         fixture = rng.choice(list(fixtures.values()))
         with_attachment = rng.random() < args.attachment_ratio
+        jobs.append((fixture_kind, fixture, with_attachment, i))
 
-        try:
-            req = _generate_request(client, args.model, fixture_kind, fixture, with_attachment)
-        except Exception as exc:  # keep seeding even if generation fails
-            print(f"[{i}/{args.count}] generation failed: {exc}")
-            continue
-
-        prompt = req.get("prompt", "")
-        attachments : list[str | Path] | None = None
-        if with_attachment and req.get("attachment_text"):
-            attachments = [render_attachment(req["attachment_text"], i)]
-
-        label = "with attachment" if attachments else "text only"
-        print(f"[{i}/{args.count}] ({fixture_kind}, {label}) {prompt[:70]}")
-        try:
-            result = run_agent(prompt, attachments=attachments)
-            for write in result.writes:
-                print(f"    side effect: {write['action']}")
-        except Exception as exc:  # keep seeding even if one run fails
-            print(f"    run failed: {exc}")
+    print(f"Generating and running {args.count} requests "
+          f"({args.concurrency} at a time)...")
+    if args.concurrency == 1:
+        for fixture_kind, fixture, with_attachment, i in jobs:
+            _seed_one(client, args, fixture_kind, fixture, with_attachment, i, args.count)
+    else:
+        with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
+            futures = [
+                executor.submit(
+                    _seed_one, client, args, fixture_kind, fixture, with_attachment, i, args.count
+                )
+                for fixture_kind, fixture, with_attachment, i in jobs
+            ]
+            for future in as_completed(futures):
+                future.result()
 
     print("Done. If the agent is instrumented, check your Braintrust project logs.")
 

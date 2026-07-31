@@ -8,11 +8,24 @@ these in one typed object makes two later exercises natural:
   * Remote evals: the same fields are exposed as eval parameters, so an SME can
     tune the agent from the Braintrust UI without touching code.
 
-The ``messages`` and ``params`` fields follow the OpenAI chat completions schema,
+The ``system_prompt_messages`` field follows the OpenAI chat completions schema,
 which is also the schema Braintrust uses for prompts.
 """
 
+import os
+from typing import Any
+
 from pydantic import BaseModel, Field
+
+# The base URL the OpenAI client uses for all model routing, read from the
+# BASE_URL env var and defaulting to the Braintrust AI gateway.
+#
+# The gateway is OpenAI-compatible, so you don't need to obtain and manage API
+# keys for each model provider. Configure the LLM providers in the Braintrust org
+# settings and they will be available through the gateway via the BRAINTRUST_API_KEY.
+# If you don't have permissions to manage providers, you may need to reach out to an admin at your org.
+GATEWAY_URL = "https://gateway.braintrust.dev"
+BASE_URL = os.environ.get("BASE_URL", GATEWAY_URL)
 
 SYSTEM_PROMPT = """You are a Sales Assistant for an account team.
 
@@ -30,36 +43,11 @@ Guidelines:
 """
 
 
-class ModelParams(BaseModel):
-    """OpenAI-style sampling parameters."""
-
-    temperature: float = 0.2
-    max_tokens: int = 1024
-    top_p: float = 1.0
-
-
-class Message(BaseModel):
-    """A single chat message in OpenAI chat completions format."""
-
-    role: str
-    content: str
-
-
 class AgentConfig(BaseModel):
-    """The full, tunable configuration for one run of the agent."""
-
-    # All model calls route through the Braintrust AI gateway, which is
-    # OpenAI-compatible. This means a single BRAINTRUST_API_KEY reaches every
-    # provider and you can change `model` to any supported model (gpt-4o-mini,
-    # claude-3-5-sonnet-latest, gemini-2.5-flash, ...) without new keys.
-    base_url: str = "https://gateway.braintrust.dev"
     model: str = "gpt-4o-mini"
-    params: ModelParams = Field(default_factory=ModelParams)
-    messages: list[Message] = Field(
-        default_factory=lambda: [Message(role="system", content=SYSTEM_PROMPT)]
+    system_prompt_messages: list[dict[str, Any]] = Field(
+        default_factory=lambda: [{"role": "system", "content": SYSTEM_PROMPT}]
     )
-    # Tool descriptions are configuration because the wording materially affects
-    # when and how the model chooses to call each tool.
     tool_descriptions: dict[str, str] = Field(
         default_factory=lambda: {
             "lookup_customer": (
@@ -91,7 +79,11 @@ class AgentConfig(BaseModel):
     @property
     def system_prompt(self) -> str:
         """Concatenated system message(s) from the OpenAI-style message list."""
-        return "\n\n".join(m.content for m in self.messages if m.role == "system")
+        return "\n\n".join(
+            m["content"]
+            for m in self.system_prompt_messages
+            if m.get("role") == "system"
+        )
 
 
 # The default configuration used by the REPL and the seed script.

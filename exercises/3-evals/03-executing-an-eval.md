@@ -1,13 +1,13 @@
 # 4.3 Execute an eval
 
-Write an eval that runs the agent over the dataset you curated in 4.1 and scores
-it with the scorers you pushed in 4.2.
+Put the last two exercises together: run the agent over the `email-drafting`
+dataset from 4.1 and grade each drafted email with the scorers from 4.2.
 
 ## Task
 
-1. In `evals/eval_agent.py`, write the eval: load the `sales-assistant-eval`
-   dataset, use the agent as the task (each `input` runs through `run_agent`), and
-   apply your scorers.
+1. In [`evals/eval_agent.py`](../../evals/eval_agent.py), build the `Eval`: load
+   the `email-drafting` dataset, run `run_agent` on each row's `prompt` as the
+   task, and pass `valid_email` and `email_goal_reached` as the scores. Note, our agent also needs to handle attachments sometimes. 
 2. Run it and open the experiment:
 
    ```bash

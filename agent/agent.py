@@ -16,47 +16,41 @@ from pathlib import Path
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import Tool
+from openai import AsyncOpenAI
+from dotenv import load_dotenv
 
 from . import tools
-from .config import DEFAULT_CONFIG, AgentConfig
+from .config import BASE_URL, DEFAULT_CONFIG, AgentConfig
+
+load_dotenv()
 
 
 def build_agent(config: AgentConfig = DEFAULT_CONFIG) -> Agent:
-    """Construct a Pydantic AI agent from a config object.
-
-    The model is served through the Braintrust AI gateway (an OpenAI-compatible
-    endpoint), so a single BRAINTRUST_API_KEY is all that is needed and the model
-    can be swapped by changing the config. Tools are registered with the
-    descriptions from the config so that wording is a tunable parameter, not
-    something buried in a docstring.
-    """
+    """Construct a Pydantic AI agent from a config object."""
+    openai_client = AsyncOpenAI(
+        base_url=BASE_URL,
+        api_key=os.environ["BRAINTRUST_API_KEY"],
+        default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
+    )
     model = OpenAIChatModel(
         config.model,
-        provider=OpenAIProvider(
-            base_url=config.base_url,
-            api_key=os.environ["BRAINTRUST_API_KEY"],
-        ),
+        provider=OpenAIProvider(openai_client=openai_client),
     )
     tool_objects = [
         Tool(fn, name=name, description=config.tool_descriptions.get(name))
         for name, fn in tools.TOOLS.items()
     ]
+
     return Agent(
         model=model,
         system_prompt=config.system_prompt,
         tools=tool_objects,
-        model_settings=ModelSettings(
-            temperature=config.params.temperature,
-            max_tokens=config.params.max_tokens,
-            top_p=config.params.top_p,
-        ),
     )
 
 
-def _load_attachment(path: str | Path) -> BinaryContent:
-    """Read a file from disk into a Pydantic AI BinaryContent part."""
+def _load_local_attachment(path: str | Path) -> BinaryContent:
+    """Read a file from the local filesystem into a Pydantic AI BinaryContent part."""
     p = Path(path)
     media_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
     return BinaryContent(data=p.read_bytes(), media_type=media_type)
@@ -64,29 +58,30 @@ def _load_attachment(path: str | Path) -> BinaryContent:
 
 @dataclass
 class AgentResult:
-    """The output of a single agent run, plus any write-tool side effects."""
+    """The output of a single agent run."""
 
     output: str
-    writes: list[dict]
 
 
 def run_agent(
     prompt: str,
-    attachments: list[str | Path] | None = None,
+    attachments: list[str | Path | BinaryContent] | None = None,
     config: AgentConfig = DEFAULT_CONFIG,
 ) -> AgentResult:
     """Run the agent once and return its output.
 
-    ``prompt`` is the user's request. ``attachments`` is an optional list of file
-    paths (for example a PDF sent by a customer) that are passed to the model as
-    multimodal input.
+    ``prompt`` is the user's request. ``attachments`` is an optional list passed to
+    the model as multimodal input. Each item is either a local file path, which is
+    read from disk, or an already-loaded ``BinaryContent`` part.
     """
-    tools.WRITE_LOG.clear()
     agent = build_agent(config)
 
     user_input: list = [prompt]
     for attachment in attachments or []:
-        user_input.append(_load_attachment(attachment))
+        if isinstance(attachment, BinaryContent):
+            user_input.append(attachment)
+        else:
+            user_input.append(_load_local_attachment(attachment))
 
     result = agent.run_sync(user_input)
-    return AgentResult(output=result.output, writes=list(tools.WRITE_LOG))
+    return AgentResult(output=result.output)

@@ -1,16 +1,24 @@
-"""Dataset pipeline for the Sales Assistant (exercise 4.1, part 3).
+"""Dataset pipeline for the Sales Assistant.
 
-Transform production traces into rows of the `sales-assistant-eval` dataset. A
-pipeline has three parts: a source (which logs to read), a transform (how to turn
-each into a dataset row), and a target (which dataset to write to). Run with:
+A pipeline has three parts: a source (which logs to read), a transform (how to
+turn each into a dataset row), and a target (which dataset to write to). Run it
+with:
 
-    bt datasets pipeline run evals/dataset_pipeline.py --limit 100 --window 30d
+    bt datasets pipeline run evals/dataset_pipeline.py --limit 10 --window 30d
 
-The reference implementation is in
-exercises/3-evals/01-curating-datasets.solution.md.
+The reference implementation is in exercises/3-evals/01-curating-datasets.solution.md.
 """
 
-from braintrust import DatasetPipeline  # noqa: F401
+from braintrust import DatasetPipeline
 
-# TODO: define the source (filter), the transform function, and the target
-# dataset, then wrap them in DatasetPipeline(...).
+
+# def transform(id=None, input=None, output=None, metadata=None, expected=None, trace=None):
+#     """Turn one source span into a dataset row."""
+#     pass
+#
+# DatasetPipeline(
+#     name="my-pipeline",
+#     source={},
+#     transform=transform,
+#     target={},
+# )

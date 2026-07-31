@@ -1,76 +1,79 @@
-# learn-bt: Braintrust enablement workshop
+# learn-bt
 
-A hands-on course for getting a team productive on Braintrust. It centers on one
-small agent, the **Sales Assistant**, and a set of exercises that take it from
-uninstrumented code to a fully traced, evaluated, and reviewable system.
+A hands-on course for getting a team productive with Braintrust. It centers on a
+small demo agent, the **Sales Assistant**, and a set of exercises that model the
+real workflow a team follows to instrument their agent and set up evals for it.
 
-The exercises are organized around the problems observability and evals solve
-(instrument, monitor, evaluate, review), not around product features. Each
-exercise is a scaled down version of a real workflow applied to the agent, so the
-"why" is always clear.
+The exercises walk through that workflow end to end: instrumenting the agent with
+tracing, monitoring its logs, building datasets and scorers, running evals, and
+reviewing results. Each one is a scaled down version of a task a team does with
+their own agent, so the reason behind each step stays clear.
 
-## The agent
+## The Sales Assistant agent
 
-The Sales Assistant helps an account team prepare for and follow up on customer
-conversations.
+The Sales Assistant is a small [Pydantic AI](https://ai.pydantic.dev/) agent that
+assists account executives with common tasks for handling their accounts.
+
+It has a set of tools and a body of fixture data, which is static data the agent
+can look up (accounts, opportunities, and knowledge base documents). Read tools
+query the fixtures. All write tools, such as drafting an email or updating a CRM
+record, are mocked, so running the agent never touches a real system.
 
 ```
 agent/
-  config.py     Tunable runtime config: model, sampling params, prompt messages
-                (OpenAI chat schema), and tool descriptions. This is what later
-                becomes remote-eval parameters.
-  tools.py      The tools: lookup_customer, get_opportunity, search_knowledge_base,
-                draft_email (mock), update_crm_record (mock).
-  fixtures.py   In-memory seed data the tools read (accounts, opportunities, docs).
-  agent.py      Builds the Pydantic AI agent from the config and runs it. Supports
-                file attachments. Starts with no tracing on purpose.
+  agent.py      Builds the Pydantic AI agent and runs it.
+  config.py     Runtime config: model, sampling params, prompt, tool descriptions.
+  tools.py      The tools (read tools query fixtures; write tools are mocked).
+  fixtures.py   Static seed data the read tools look up.
 main.py         A REPL for chatting with the agent.
-scripts/seed.py Generates realistic requests and runs the agent to seed traces.
-evals/          Eval files: scorer and eval templates you complete, plus
-                reference dataset pipeline and remote eval server.
 exercises/      The workshop exercises, grouped by section.
 ```
 
-### Model routing
-
-All model calls go through the **Braintrust AI gateway**, an OpenAI-compatible
-endpoint. That means a single `BRAINTRUST_API_KEY` reaches every provider, and you
-can change the model in `config.py` (`gpt-4o-mini`, `claude-3-5-sonnet-latest`,
-`gemini-2.5-flash`, ...) with no new credentials. No OpenAI or Anthropic key is
-needed.
-
-## Setup
+## Getting started
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
+```
+
+This demo uses the Braintrust Gateway to handle all model routing. The Gateway allows using any SDK framework with any model, while all model providers are authenticated within Braintrust. This reduces the need for having to maintain provider secrets locally, and also allows us to swap models on the fly without worrying about code changes.
+
+If you do not have access to Braintrust, reach out to an admin in your
+organization to get set up.
+
+Set the key either in a `.env` file at the repo root:
+
+```bash
 echo "BRAINTRUST_API_KEY=sk-..." > .env
 ```
 
-## Try it
+or by exporting it in your shell:
 
 ```bash
-# Chat with the agent
-uv run python main.py
-
-# Seed a batch of traces (populates Braintrust once the agent is instrumented)
-uv run python -m scripts.seed --count 20 --attachment-ratio 0.3
+export BRAINTRUST_API_KEY=sk-...
 ```
 
-## The workshop
+### Model routing through the gateway
 
-Work through the exercises in order. Each section builds on the state you left the
-agent in. See [`exercises/README.md`](exercises/README.md) for the full map.
+Model calls are routed to the base URL set by the `BASE_URL` environment
+variable, which defaults to the Braintrust AI gateway
+(`https://gateway.braintrust.dev`). This
+agent uses the OpenAI chat completions API for every provider, and your
+`BRAINTRUST_API_KEY` is all that is needed.
 
-| Section | Folder | You will |
-| --- | --- | --- |
-| 1 Foundations | `exercises/0-foundations` | Explore a seeded project and set up the CLI |
-| 2 Instrumentation | `exercises/1-instrumentation` | Add tracing and log attachments |
-| 3 Monitoring | `exercises/2-monitoring` | Query logs with SQL and analyze them with Loop |
-| 4 Evals | `exercises/3-evals` | Curate datasets, build scorers, run and compare evals |
-| 5 Human + remote review | `exercises/4-human-review` | Build custom views, run human review, stand up a remote eval |
+If you do not have access to the gateway, point `BASE_URL` at the OpenAI base URL
+instead and supply an OpenAI API key. In this mode you can only use OpenAI models,
+so set the model in `config.py` accordingly.
 
-By the end, the agent you started with is instrumented, its logs are queryable,
-its quality is measured by evals, its edge cases are human-reviewed, and its
-config is tunable by non-engineers through a playground.
+```bash
+export BASE_URL=https://api.openai.com/v1
+export BRAINTRUST_API_KEY=sk-...   
+```
+
+Once the key (and base URL, if you changed it) is set, start the REPL and chat
+with the agent:
+
+```bash
+uv run python main.py
+```

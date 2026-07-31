@@ -9,24 +9,32 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from braintrust import Eval, init_dataset
-from autoevals import Factuality
+from pydantic_ai import BinaryContent
 
 from agent.agent import run_agent
+from scorers import valid_email, email_goal_reached
 
-PROJECT = "sales-assistant"
-DATASET = "sales-assistant-eval"
+PROJECT = "learn-bt"
+DATASET = "email-drafting"
 
 
-def task(input: str) -> str:
-    return run_agent(input).output
+def task(input):
+    attachments = []
+    attachment = input.get("attachment")
+    if attachment is not None:
+        attachments.append(
+            BinaryContent(data=attachment.data, media_type=attachment.reference["content_type"])
+        )
+
+    return run_agent(input["prompt"], attachments=attachments).output
 
 
 Eval(
     PROJECT,
+    experiment_name="email-drafting-eval",
     data=init_dataset(project=PROJECT, name=DATASET),
     task=task,
-    scores=[Factuality()],
-    experiment_name="sales-assistant-baseline",
+    scores=[valid_email, email_goal_reached],
 )
 ```
 
@@ -38,14 +46,15 @@ bt eval evals/eval_agent.py
 
 ## Notes
 
-- `init_dataset` loads the dataset from 4.1. Each row's `input` runs through the
-  task and its `expected` is available to scorers.
-- `task` is the agent itself. Because the agent is instrumented, each eval row
-  also produces a full trace under the experiment, so you can open any row and see
-  the tool calls behind its score.
-- `Factuality` is an autoevals judge. Add the scorers you pushed in 4.2 to the
-  experiment from the UI, or import and pass them in `scores` directly.
-- To compare versions, change `agent/config.py` (for example the model, which the
-  gateway makes a one-line swap), give the run a new `experiment_name`, and re-run.
-  Select both experiments in the UI to see the diff.
-- Use `bt eval --first 3 evals/eval_agent.py` for a fast smoke run while iterating.
+- `init_dataset` loads the `email-drafting` dataset from 4.1. Each row's `input`
+  (`{"prompt": ...}`) runs through the task.
+- **Attachments come from the dataset, not disk.** `init_dataset` hydrates any
+  saved attachment into a `ReadonlyAttachment`, so the task reads its bytes
+  (`attachment.data`) and passes a `BinaryContent` into `run_agent`.
+- The task returns `run_agent(...).output`, the agent's final reply. It does not
+  need to surface the drafted email: the scorers do that themselves. Because the
+  agent is instrumented, each run produces a trace, and `valid_email` and
+  `email_goal_reached` filter that trace to the `draft_email` span to grade the
+  email (see 4.2).
+  the same scorers you pushed in 4.2. Braintrust passes each the run's `trace`.
+- Tip: Use `bt eval --first 3 evals/eval_agent.py` for a fast smoke run.
