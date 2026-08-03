@@ -1,24 +1,20 @@
 """The Sales Assistant agent.
-
-This module wires the config, tools, and Pydantic AI together into a runnable
-agent. It is intentionally free of any Braintrust tracing: adding observability
-to this agent is the first hands-on exercise. By the end of the workshop this is
-the file (and its callers) you will have instrumented and evaluated.
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import mimetypes
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
+from typing import Any, Sequence
 
-from pydantic_ai import Agent, BinaryContent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.tools import Tool
-from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageFunctionToolCall
 
 from . import tools
 from .config import BASE_URL, DEFAULT_CONFIG, AgentConfig
@@ -26,34 +22,50 @@ from .config import BASE_URL, DEFAULT_CONFIG, AgentConfig
 load_dotenv()
 
 
-def build_agent(config: AgentConfig = DEFAULT_CONFIG) -> Agent:
-    """Construct a Pydantic AI agent from a config object."""
-    openai_client = AsyncOpenAI(
+class AgentError(RuntimeError):
+    """Raised when a run cannot produce a final answer."""
+
+
+@lru_cache(maxsize=1)
+def get_client() -> OpenAI:
+    """Lazily initialized OpenAI client. Reused across agent runs."""
+    return OpenAI(
         base_url=BASE_URL,
         api_key=os.environ["BRAINTRUST_API_KEY"],
         default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
     )
-    model = OpenAIChatModel(
-        config.model,
-        provider=OpenAIProvider(openai_client=openai_client),
-    )
-    tool_objects = [
-        Tool(fn, name=name, description=config.tool_descriptions.get(name))
-        for name, fn in tools.TOOLS.items()
-    ]
-
-    return Agent(
-        model=model,
-        system_prompt=config.system_prompt,
-        tools=tool_objects,
-    )
 
 
-def _load_local_attachment(path: str | Path) -> BinaryContent:
-    """Read a file from the local filesystem into a Pydantic AI BinaryContent part."""
-    p = Path(path)
-    media_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
-    return BinaryContent(data=p.read_bytes(), media_type=media_type)
+@dataclass
+class InputFile:
+    """A file sent to the model as multimodal input."""
+
+    data: bytes
+    media_type: str
+    filename: str = "attachment"
+
+    @classmethod
+    def from_path(cls, path: str | Path) -> InputFile:
+        """Read a file from the local filesystem."""
+        p = Path(path)
+        media_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+        return cls(data=p.read_bytes(), media_type=media_type, filename=p.name)
+
+    @classmethod
+    def from_dataset_attachment(cls, attachment: Any) -> InputFile:
+        """Read a Braintrust attachment hydrated from a dataset row."""
+        return cls(
+            data=attachment.data,
+            media_type=attachment.reference["content_type"],
+            filename=attachment.reference.get("filename", "attachment"),
+        )
+
+    def as_content_part(self) -> dict[str, Any]:
+        """Render the file as a content part in a chat message."""
+        url = f"data:{self.media_type};base64,{base64.b64encode(self.data).decode()}"
+        if self.media_type.startswith("image/"):
+            return {"type": "image_url", "image_url": {"url": url}}
+        return {"type": "file", "file": {"filename": self.filename, "file_data": url}}
 
 
 @dataclass
@@ -61,27 +73,72 @@ class AgentResult:
     """The output of a single agent run."""
 
     output: str
+    messages: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _user_message(prompt: str, attachments: list[InputFile]) -> dict[str, Any]:
+    """Build the user message, as plain text or as text plus attachment parts."""
+    if not attachments:
+        return {"role": "user", "content": prompt}
+    return {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": prompt},
+            *(attachment.as_content_part() for attachment in attachments),
+        ],
+    }
+
+
+def _tool_message(call: ChatCompletionMessageFunctionToolCall) -> dict[str, Any]:
+    result = tools.dispatch(call.function.name, call.function.arguments)
+    return {
+        "role": "tool",
+        "tool_call_id": call.id,
+        "content": json.dumps(result),
+    }
 
 
 def run_agent(
     prompt: str,
-    attachments: list[str | Path | BinaryContent] | None = None,
+    attachments: Sequence[str | Path | InputFile] | None = None,
     config: AgentConfig = DEFAULT_CONFIG,
 ) -> AgentResult:
     """Run the agent once and return its output.
 
     ``prompt`` is the user's request. ``attachments`` is an optional list passed to
     the model as multimodal input. Each item is either a local file path, which is
-    read from disk, or an already-loaded ``BinaryContent`` part.
+    read from disk, or an already-loaded ``InputFile``.
     """
-    agent = build_agent(config)
+    client = get_client()
+    input_files = [
+        a if isinstance(a, InputFile) else InputFile.from_path(a)
+        for a in attachments or []
+    ]
+    messages: list[dict[str, Any]] = [
+        *config.system_prompt_messages,
+        _user_message(prompt, input_files),
+    ]
+    tool_specs = tools.tool_specs()
 
-    user_input: list = [prompt]
-    for attachment in attachments or []:
-        if isinstance(attachment, BinaryContent):
-            user_input.append(attachment)
-        else:
-            user_input.append(_load_local_attachment(attachment))
+    for _ in range(config.max_turns):
+        response = client.chat.completions.create(
+            model=config.model,
+            messages=messages,  # type: ignore[arg-type]
+            tools=tool_specs,
+        )
+        choice = response.choices[0]
+        message = choice.message
 
-    result = agent.run_sync(user_input)
-    return AgentResult(output=result.output)
+        messages.append(message.model_dump(exclude_none=True))
+
+        if choice.finish_reason == "length":
+            raise AgentError("The model's response was cut off by the token limit.")
+        if message.refusal:
+            return AgentResult(output=message.refusal, messages=messages)
+        if not message.tool_calls:
+            return AgentResult(output=message.content or "", messages=messages)
+
+        for call in message.tool_calls:
+            messages.append(_tool_message(call))  # type: ignore[arg-type]
+
+    raise AgentError(f"The agent did not finish within {config.max_turns} turns.")

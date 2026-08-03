@@ -70,6 +70,8 @@ name or id, and their ask should plausibly require the assistant to look it up o
 act on it. Keep it to one or two sentences and make it sound like a busy person
 typing quickly.
 
+An AE may share an attachment along with their request too. An attachment can be a pdf file or an image. When asked to generate an attachment, generate the text content of that attachment, and make it relevant to the actual prompt the AE would give the agent. Ex. the AE may ask to update something in CRM for an account, and share a screenshot of a message from the customer asking for a renewal.
+
 Return a JSON object with:
   - "prompt": the AE's request (one or two sentences).
   - "attachment_text": when asked to include an attachment, generate content for
@@ -168,7 +170,7 @@ def _seed_one(
     label = "with attachment" if attachments else "text only"
     print(f"[{i}/{total}] ({fixture_kind}, {label}) {prompt}")
     try:
-        run_agent(prompt, attachments=attachments) #type: ignore
+        run_agent(prompt, attachments=attachments)
     except Exception as exc:  # keep seeding even if one run fails
         print(f"    run failed: {exc}")
 

@@ -46,7 +46,7 @@ def main() -> None:
             print(f"(attached {path}; it will be sent with your next message)")
             continue
 
-        result = run_agent(line, attachments=pending_attachments or None) #type: ignore
+        result = run_agent(line, attachments=pending_attachments or None)
         pending_attachments = []
 
         print(f"\nassistant> {result.output}\n")

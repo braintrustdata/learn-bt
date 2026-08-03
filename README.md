@@ -11,8 +11,8 @@ their own agent, so the reason behind each step stays clear.
 
 ## The Sales Assistant agent
 
-The Sales Assistant is a small [Pydantic AI](https://ai.pydantic.dev/) agent that
-assists account executives with common tasks for handling their accounts.
+The Sales Assistant is a small agent that assists account executives with common
+tasks for handling their accounts. 
 
 It has a set of tools and a body of fixture data, which is static data the agent
 can look up (accounts, opportunities, and knowledge base documents). Read tools
@@ -21,9 +21,9 @@ record, are mocked, so running the agent never touches a real system.
 
 ```
 agent/
-  agent.py      Builds the Pydantic AI agent and runs it.
-  config.py     Runtime config: model, sampling params, prompt, tool descriptions.
-  tools.py      The tools (read tools query fixtures; write tools are mocked).
+  agent.py      The agent loop and primary entry point for invoking the agent.
+  config.py     Runtime config: model, sampling params, prompt, turn limit.
+  tools.py      The tools and their schemas (read tools query fixtures; write tools are mocked).
   fixtures.py   Static seed data the read tools look up.
 main.py         A REPL for chatting with the agent.
 exercises/      The workshop exercises, grouped by section.
