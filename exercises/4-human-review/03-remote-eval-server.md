@@ -12,6 +12,8 @@ In `evals/parameters.py`, build a parameters object from the agent's `config.py`
 Use a `prompt` parameter for the system prompt so it gets an editable prompt
 control in the UI; the prompt parameter also carries the model name.
 
+Add `max_turns` as a second parameter. Any valid Pydantic schema can be rendered as a parameter, which the UI displays as a controllable input. `prompt` and `model` are special paramaeter types that render the associated UI.
+
 Push these parameters to Braintrust via:
 
 ```bash
@@ -23,8 +25,9 @@ Verify in the UI that the parameters appear and are editable.
 
 ### 2. Write the remote eval server
 
-In `evals/eval_remote_agent.py`, load the parameters and pass their values down
-through the `hooks` object to build an `AgentConfig` and run the agent. Follow the attachment reading pattern implemented in the previous eval exercise.
+In `evals/eval_remote_agent.py`, load the parameters and read their values off the
+`hooks` object to build an `AgentConfig`, including `max_turns`, and run the agent.
+Follow the attachment reading pattern implemented in the previous eval exercise.
 
 ### 3. Run it
 

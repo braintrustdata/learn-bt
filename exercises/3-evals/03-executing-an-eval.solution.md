@@ -9,9 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from braintrust import Eval, init_dataset
-from pydantic_ai import BinaryContent
 
-from agent.agent import run_agent
+from agent.agent import InputFile, run_agent
 from scorers import valid_email, email_goal_reached
 
 PROJECT = "learn-bt"
@@ -22,9 +21,7 @@ def task(input):
     attachments = []
     attachment = input.get("attachment")
     if attachment is not None:
-        attachments.append(
-            BinaryContent(data=attachment.data, media_type=attachment.reference["content_type"])
-        )
+        attachments.append(InputFile.from_dataset_attachment(attachment))
 
     return run_agent(input["prompt"], attachments=attachments).output
 
@@ -48,9 +45,9 @@ bt eval evals/eval_agent.py
 
 - `init_dataset` loads the `email-drafting` dataset from 4.1. Each row's `input`
   (`{"prompt": ...}`) runs through the task.
-- **Attachments come from the dataset, not disk.** `init_dataset` hydrates any
+- `init_dataset` hydrates any
   saved attachment into a `ReadonlyAttachment`, so the task reads its bytes
-  (`attachment.data`) and passes a `BinaryContent` into `run_agent`.
+  (`attachment.data`) and passes an `InputFile` into `run_agent`.
 - The task returns `run_agent(...).output`, the agent's final reply. It does not
   need to surface the drafted email: the scorers do that themselves. Because the
   agent is instrumented, each run produces a trace, and `valid_email` and

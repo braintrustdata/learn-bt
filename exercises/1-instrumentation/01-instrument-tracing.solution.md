@@ -1,6 +1,6 @@
 # Solution: Instrument the agent with Braintrust tracing
 
-All changes are in `agent/agent.py` and `agent/tools.py`.
+All changes are in `agent/agent.py`, `agent/tools.py`, and `agent/fixtures.py`.
 
 ## 1. Instrument with the CLI and a coding agent
 
@@ -11,52 +11,74 @@ bt setup instrument --agent claude
 ```
 
 `bt setup instrument` downloads the latest `instrument` workflow docs and runs your
-coding agent against them. Following those docs, the agent should add tracing at the top
-of `agent/agent.py`, roughly:
+coding agent against them. Following those docs, the agent should initialize a logger
+and add spans for the agent run, the model calls, and the tool calls.
+
+Often, we need more granularity than what a coding agent picks on its own, hence we
+explore provider wrapping and custom logging below.
+
+## 2. Provider wrapping and traced functions
+
+In `agent/agent.py`, initialize a logger and wrap the client where it is built:
 
 ```python
 import braintrust
+from braintrust import traced, wrap_openai
 
-braintrust.init_logger(project="sales-assistant")
-braintrust.auto_instrument()
+braintrust.init_logger(project="learn-bt")
+
+
+@lru_cache(maxsize=1)
+def get_client() -> OpenAI:
+    return wrap_openai(OpenAI(...))
 ```
 
-`auto_instrument()` patches Pydantic AI (and other supported libraries), so agent
-runs, model calls, and tool calls are traced with no per-call code.
+`wrap_openai` patches the client instance you hand it, so every
+`chat.completions.create` call on it becomes an `llm` span. Only that instance is
+affected, which is why the separate client `scripts/seed.py` uses to generate requests
+stays out of your logs.
 
-Often, we need more granularity than what auto_instrument provides, hence, we explore
-provider wrapping and custom logging below.
-
-## 2. Provider wrapping
-
-Call `setup_pydantic_ai()` at the top of `agent/agent.py`:
+Then the root span:
 
 ```python
-from braintrust import setup_pydantic_ai
-
-setup_pydantic_ai(project_name="learn-bt")
+@traced(type="task", name="agent_run")
+def run_agent(prompt, attachments=None, config=DEFAULT_CONFIG) -> AgentResult:
+    ...
 ```
 
-`setup_pydantic_ai()` instruments only Pydantic AI (rather than every library).
-
-## 3. Log a custom span
-
-The tool calls are already captured by the provider wrapper, but the business logic
-underneath them is not. Those helpers live in `agent/fixtures.py`. Decorate them with
-`@traced` so they show up as their own spans, nested under the tool calls that invoke them.
-
-Start with automatic IO capture on `find_accounts`:
+and each tool in `agent/tools.py`:
 
 ```python
 from braintrust import traced
 
-@traced
-def find_accounts(query: str) -> list[dict]:
+
+@traced(type="tool")
+def lookup_customer(query: str) -> dict:
     ...
 ```
 
-The decorator logs the function arguments and return value for you, so the span records the
-query in and the matched accounts out with no extra code.
+Without `name`, a span takes the name of the function it decorates, so the tools need
+only `type`. Nesting needs no wiring: the model calls and the tools run inside
+`run_agent`, so their spans attach to its span.
+
+## 3. Log a custom span
+
+### A metadata flag on the root span
+
+```python
+from braintrust import current_span, traced
+
+
+@traced(type="task", name="agent_run")
+def run_agent(prompt, attachments=None, config=DEFAULT_CONFIG) -> AgentResult:
+    current_span().log(metadata={"has_attachments": bool(attachments)})
+    ...
+```
+
+`current_span()` returns the span `@traced` opened, and `log()` merges into it, so the
+input and output are still captured automatically.
+
+### Trimming what gets captured
 
 `search_docs` returns the full matching documents, including their entire bodies, which is more
 than you want on the span. Turn off automatic IO capture with `notrace_io=True` and log a trimmed
@@ -67,21 +89,11 @@ import re
 
 from braintrust import current_span, traced
 
+
 @traced(notrace_io=True)
 def search_docs(query: str) -> list[dict]:
-    stopwords = {...}
-    terms = [
-        t for t in re.findall(r"[a-z0-9]+", query.lower())
-        if len(t) >= 3 and t not in stopwords
-    ]
-    hits = []
-    for doc in KNOWLEDGE_BASE.values():
-        words = set(re.findall(
-            r"[a-z0-9]+",
-            " ".join([doc["title"], " ".join(doc["tags"]), doc["body"]]).lower(),
-        ))
-        if any(term in words for term in terms):
-            hits.append(doc)
+    #{...function logic}
+    
     current_span().log(
         input={"query": query},
         output={"num_hits": len(hits), "doc_ids": [d["id"] for d in hits]},

@@ -6,14 +6,9 @@
    [CLI quickstart](https://www.braintrust.dev/docs/reference/cli/quickstart) for
    the install command for your platform.
 2. Run setup:
-   First, `bt setup` will run through initializing the CLI. Authenticate with your Braintrust org and create a project for this course.
+   First, `bt setup` will run through initializing the CLI. Authenticate with your Braintrust org and create a project for this course. It will also optionally ask to setup agent skills. It's highly recommended to set these up to allow coding agents to use Braintrust better.
    ```bash
    bt setup
-   ```
-   
-   Setup agent skills (enable your coding agent to reliably use the CLI)
-   ```bash
-   bt setup skills -h
    ```
 
 3. Explore a couple of commands, for example:

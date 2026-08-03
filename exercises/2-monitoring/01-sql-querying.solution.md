@@ -2,11 +2,17 @@
 
 ## 1. Filter for logs with attachments
 
-We want to filter for traces where any span has an attachment. Since in our agent the attachments are always provided by the user prompt, the exact SQL filter is
+The flag from 2.1 is on the root span, which is the row the Logs table shows, so the
+filter reads straight off it:
 ```sql
-any_span(input.user_prompt.attachment.type = 'braintrust_attachment')
+metadata.has_attachments = true
 ```
 Alternatively, you can generate this filter by asking Loop in the filter modal.
+
+The attachment itself lives on the `llm` span, nested inside the messages sent to the
+model. Filtering on that payload directly would mean matching a path whose position
+shifts with the number of turns and content parts, which is exactly why 2.1 tags the run
+with a flag instead.
 
 ## 2. Fuzzy search for one opportunity
 
@@ -41,11 +47,6 @@ Describe the query to a coding agent and have it run the same SQL through the
 
 ## Notes
 
-- `estimated_cost()` and `metrics.tokens` are only populated once the agent is
-  instrumented (section 2). On an uninstrumented project these columns are empty.
-- If your tracing doesn't open an `agent_run` span, filter to root spans another
-  way, for example by comparing the span id against `root_span_id`. The goal is
-  one row per trace, not per span.
 - The SQL sandbox and Loop run in strict lint mode, which is why the query keeps
   a range filter on `created` and a `LIMIT`. The CLI enforces the same linter;
   pass `--force-ignore-linter` only for a query that is already selective and

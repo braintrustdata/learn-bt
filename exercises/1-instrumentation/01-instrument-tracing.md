@@ -13,16 +13,13 @@ uv run python -m scripts.seed --count <int>
 
 ### 1. Instrument with the CLI and a coding agent
 
-Rather than writing the tracing code by hand, use the Braintrust CLI to drive your
-coding agent through the instrumentation. From the repo root, run:
+Rather than writing the tracing code by hand, use the Braintrust CLI to drive your coding agent through the instrumentation. Note: before you do this, make sure to have initialized a git repo so agent changes can be safely discarded.From the repo root, run:
 
 ```bash
 bt setup instrument --agent <coding-agent> #[claude, codex, cursor, etc.]
 ```
 
-This downloads the latest `instrument` workflow docs and hands them to the agent,
-which then adds tracing to `agent/agent.py` (initializing a logger and enabling
-auto-instrumentation so agent runs, model calls, and tool calls are all traced).
+This downloads the latest `instrument` workflow docs and hands them to the coding agent, which then uses its reasoning/judgement to instrument the Sales Assistant.
 
 Then seed some traces and confirm they appear in your project:
 
@@ -34,40 +31,42 @@ Did it work? Open the logs (`bt view logs` or the Braintrust UI) and inspect a t
 If the coding agent instrumented correctly, you should see the agent run as the root span, 
 with model and tool calls nested underneath, without having written any per-call tracing code yourself.
 
-Now, undo the agent's changes (discard changes from git history). We will now 
+Now, undo the coding agent's changes (discard changes from git history). We will now 
 explore instrumenting via provider integration.
 
-### 2. Provider wrapping with decorators
+### 2. Provider wrapping and traced functions
 
-The Braintrust SDK provides wrappers integrations for most of the common agent frameworks and model providers. 
-Call `setup_pydantic_ai()` at the top level of the agent (`agent/agent.py`).
-Seed some traces and look at how they appear.
+The Braintrust SDK provides wrapper integrations for most of the common agent frameworks
+and model providers. Our agent calls the OpenAI client directly, so wrap that client with
+`wrap_openai()` where it is built in `agent/agent.py`. You also need somewhere for the
+spans to go, so call `init_logger()` at the top level of the module.
 
-You should see in the new logs that the entire agent run is automatically captured as a 
-trace, including tool calls, in its proper execution heirarchy.
+Seed some traces and look at how they appear. Every model call the agent makes is now an
+`llm` span, with metrics automatically parsed.
 
-The wrapper also captures attachments. Seed with `--attachment-ratio 0.4` and any file
+The wrapper also captures attachments. Seed with `--attachment-ratio 1.0` and any file
 sent to the model, such as a PDF or image, is logged as an `Attachment` and previews in
 the trace, again with no extra code.
 
+What this doesn't give us is the trace structure. An agent run is several different steps, and logically we want to associate these all with a single trace. A trace should be a unique agent run. We can trace all of the intermediate functions and tool calls via the `@traced` decorator. This decorator automatically captures input and output of the decorated function as a span, and nests the span in its proper trace heirarchy. Pass `type` and `name` parameters to the decorator to control how the span appears:
+
+- `run_agent` in `agent/agent.py` is the root span of a run. Give it `type="task"` and
+  `name="agent_run"`.
+- each tool function in `agent/tools.py` gets `type="tool"`.
+- the business logic functions (`find_accounts()` and `search_docs()`) in `agent/fixtures.py`
+
+Seed again. Spans nest by execution, so each trace should now be one `agent_run` root span
+with the model and tool calls underneath it, in the order the agent made them.
+
 ### 3. Log a custom span
 
-For custom business logic and functions, we can trace them by adding the `@traced` decorator to
-the function. When this decorator is active, Braintrust will automatically capture the input and output
-to the function as part of the span. We can customize the span type and name via `type` and `name` parameters
-on the decorator. We can also omit the automatic input/output capture by passing `notrace_io=True` to the decorator.
-When doing so, we can manually log the span shape by calling `span.log()` to control what gets logged. 
+`@traced` auto captures a function's arguments and return value. Often This is helpful for most scenarios, but sometimes we want to control what gets logged more granularly, or add additional metdata to the sapn.
+an extra field, or less than the full input and output. We can achieve this via the `current_span().log()` method. This method manaully logs additional, arbitrary data on the currently active span. This gets merged with anything else that's already captured on the span.
 
-The agent's tool calls are already captured by the provider wrapper, but the business logic
-underneath them is not. Those helpers live in `agent/fixtures.py`. Add a `@traced` decorator to
-`find_accounts` and `search_docs` so they show up as their own spans, nested under the tool
-calls that invoke them. Seed some traces and confirm the new spans appear in the right place.
+We want to be able to easily denote agent runs that work with attachments. In `run_agent()` log a metadata field called `has_attachments : bool` that is `True` if the agent run is working with attachments.
 
-`search_docs` returns the full matching documents, including their entire bodies, which is more
-than you want on the span. Pass `notrace_io=True` to its decorator and call `span.log()` to log a
-trimmed output instead, such as the number of hits and the matched document ids, along with the
-matched search terms as metadata. Seed some more traces and compare how `search_docs` now logs
-against the automatic capture on `find_accounts`.
+We can also prevent `@traced` from auto capturing the input and output.
+`search_docs` currently returns the full matching documents, including their entire bodies, which is more than you want on the span. Pass `notrace_io=True` to its decorator and call `current_span().log()` to log a trimmed output instead, such as the number of hits and the matched document ids, along with the matched search terms as metadata. Seed some more traces and compare how `search_docs` now logs against the automatic capture on `find_accounts`.
 
 
 
