@@ -35,20 +35,12 @@ async def transform(id=None, input=None, output=None, metadata=None, expected=No
         s for s in spans if (s.span_attributes or {}).get("name") == "draft_email"
     )
 
-    user_prompt = root.input["user_prompt"]
-    row_input = {"prompt": user_prompt[0]}
+    row_input = {"prompt": root.input["prompt"]}
 
-    # If the span has an attachment, we preserve that as a reference in our dataset as well.
-    attachment = next(
-        (
-            part["attachment"]
-            for part in user_prompt
-            if isinstance(part, dict) and part.get("attachment") is not None
-        ),
-        None,
-    )
-    if attachment is not None:
-        row_input["attachment"] = attachment
+    # If the run had an attachment, preserve it as a reference in the dataset too.
+    attachments = root.input.get("attachments")
+    if attachments:
+        row_input["attachment"] = attachments[0]
 
     return {
         "input": row_input,

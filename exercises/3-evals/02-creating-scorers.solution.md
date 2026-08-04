@@ -13,13 +13,14 @@ load_dotenv()
 
 project = braintrust.projects.create(name="learn-bt")  # Idempotent operation
 
-# This example uses the Braintrust Gateway for LLM calls. This judge client is
-# provided as reference to use as the client for the LLM Judge
-judge_client = OpenAI(
-    base_url=os.getenv("BRAINTRUST_AI_GATEWAY_URL") or "https://gateway.braintrust.dev",
-    api_key=os.environ["BRAINTRUST_API_KEY"],
-    default_headers={"x-bt-org-name": os.getenv("BRAINTRUST_ORG_NAME", "")},
-)
+if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
+    judge_client = OpenAI()
+else:
+    judge_client = OpenAI(
+        base_url=os.getenv("BASE_URL") or "https://gateway.braintrust.dev",
+        api_key=os.environ["BRAINTRUST_API_KEY"],
+        default_headers={"x-bt-org-name": os.getenv("BRAINTRUST_ORG_NAME", "")},
+    )
 
 
 # --- Code scorer -----------------------------------------------------------
@@ -61,6 +62,8 @@ Body: {{output.body}}
 
 Does the drafted email address the request?
 The email must specifically fully address the requested action, and not just repeat the request.
+
+Note: a request may have multiple parts to it. In that case, the email only needs to address the email component of the request.
 
 Y: yes
 N: no

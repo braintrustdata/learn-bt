@@ -100,6 +100,5 @@ Register the local dev server in a playground, then run the eval.
 ## Notes
 - When using a remote eval server as the eval task, the Braintrust UI proxies each request to the server and simply waits for the response. This allows complex eval logic to stay in place, while still providing all users access to the same eval location.
 - New parameters iterated on in a playground can be saved as a new version directly from the playground.
-- `hooks.parameters["max_turns"]` hands back the plain integer. The `value` field only exists to declare the parameter's type and description; you don't unwrap it at runtime. The `prompt` parameter behaves differently because it is a Braintrust type: it returns a prompt object you read `.prompt.messages` and `.options` off.
-- `max_turns` is an ordinary field on `AgentConfig`, and exposing it took a four-line Pydantic model. Any system level configuration that's a valid Pydantic BaseModel can be tuned at eval runtime the same way. As a bonus, add a parameter that restricts which tools the agent is allowed to call.
+- The native `prompt` parameter provides the prompt args in the OpenAI Chat Completions API schema.
 - The data field in the `Eval()` is ignored for a remote eval. The dataset is selected at runtime. Additional scorers defined in the UI are appended to the eval defined scorers.
