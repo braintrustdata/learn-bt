@@ -75,6 +75,7 @@ email_goal_reached_scorer = LLMClassifier(
     choice_scores={"Y": 1, "N": 0},
     use_cot=True,
     client=judge_client,
+    model="gpt-5.6-luna"
 )
 
 
