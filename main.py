@@ -12,7 +12,8 @@ customer emailed you), stage it first with:
 The file is attached to your next message and then cleared. Type /exit to quit.
 
 Requires BRAINTRUST_API_KEY in your environment (a .env file is loaded if
-present). Model calls route through the Braintrust gateway.
+present). Model calls route through the Braintrust gateway, unless
+DISABLE_BRAINTRUST_GATEWAY is set, in which case they go to the OpenAI provider directly
 """
 
 from dotenv import load_dotenv

@@ -17,7 +17,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
 
 from . import tools
-from .config import BASE_URL, DEFAULT_CONFIG, AgentConfig
+from .config import DEFAULT_CONFIG, AgentConfig
 
 load_dotenv()
 
@@ -28,9 +28,13 @@ class AgentError(RuntimeError):
 
 @lru_cache(maxsize=1)
 def get_client() -> OpenAI:
-    """Lazily initialized OpenAI client. Reused across agent runs."""
+    if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
+        return OpenAI(
+            base_url=os.environ["BASE_URL"]
+        )
+
     return OpenAI(
-        base_url=BASE_URL,
+        base_url=os.environ["BASE_URL"],
         api_key=os.environ["BRAINTRUST_API_KEY"],
         default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
     )
@@ -123,7 +127,7 @@ def run_agent(
     for _ in range(config.max_turns):
         response = client.chat.completions.create(
             model=config.model,
-            messages=messages,  # type: ignore[arg-type]
+            messages=messages,  # type: ignore
             tools=tool_specs,
         )
         choice = response.choices[0]
@@ -139,6 +143,6 @@ def run_agent(
             return AgentResult(output=message.content or "", messages=messages)
 
         for call in message.tool_calls:
-            messages.append(_tool_message(call))  # type: ignore[arg-type]
+            messages.append(_tool_message(call))  # type: ignore
 
     raise AgentError(f"The agent did not finish within {config.max_turns} turns.")

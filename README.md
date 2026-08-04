@@ -42,16 +42,17 @@ This demo uses the Braintrust Gateway to handle all model routing. The Gateway a
 If you do not have access to Braintrust, reach out to an admin in your
 organization to get set up.
 
-Set the key either in a `.env` file at the repo root:
+Set the env vars either in a `.env` file at the repo root:
 
 ```bash
-echo "BRAINTRUST_API_KEY=sk-..." > .env
+cp example.env .env
 ```
 
-or by exporting it in your shell:
+or by exporting them in your shell:
 
 ```bash
 export BRAINTRUST_API_KEY=sk-...
+...
 ```
 
 ### Model routing through the gateway
@@ -60,15 +61,18 @@ Model calls are routed to the base URL set by the `BASE_URL` environment
 variable, which defaults to the Braintrust AI gateway
 (`https://gateway.braintrust.dev`). This
 agent uses the OpenAI chat completions API for every provider, and your
-`BRAINTRUST_API_KEY` is all that is needed.
+`BRAINTRUST_API_KEY` is all that is needed. Model providers should be configured in the Braintrust org, so that provider API keys do not need to be managed in this source code. 
 
-If you do not have access to the gateway, point `BASE_URL` at the OpenAI base URL
-instead and supply an OpenAI API key. In this mode you can only use OpenAI models,
-so set the model in `config.py` accordingly.
+### Running without the gateway
+
+It is possible to go through this course without the Braintrust Gateway. To disable the gateway, set `DISABLE_BRAINTRUST_GATEWAY=1`,
+supply an `OPENAI_API_KEY`, and update the `BASE_URL` to OpenAI. Model calls then go directly through the OpenAI provider. In this mode you can
+only use OpenAI models, so set the model in `config.py` accordingly.
 
 ```bash
-export BASE_URL=https://api.openai.com/v1
-export BRAINTRUST_API_KEY=sk-...   
+DISABLE_BRAINTRUST_GATEWAY=1
+OPENAI_API_KEY=sk-...
+BASE_URL="https://api.openai.com/v1"
 ```
 
 Once the key (and base URL, if you changed it) is set, start the REPL and chat

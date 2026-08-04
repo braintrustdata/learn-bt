@@ -19,16 +19,11 @@ them in order. Each later section builds on the state you left the agent in.
 | 5 | `4-human-review` | Custom views, human review, remote evals |
 
 Each exercise is a markdown file with a task, and occasionally a short bit of
-background. Exercises that change code have a `.solution.md` sibling. Exercises
-marked **[UI]** or **[CLI]** are done in the Braintrust app or the terminal.
+background. Most exercises have a `solution.md` complement that includes one way to solve the exercise. 
 
 ## Prerequisites
 
-- Python 3.12+ and [uv](https://docs.astral.sh/uv/).
-- A Braintrust account and a `BRAINTRUST_API_KEY`. Put it in a `.env` file at the
-  repo root. Model calls route through the Braintrust gateway, so you do not need
-  an OpenAI or Anthropic key.
-- The `bt` CLI (installed in `0-foundations/02`).
+- Check out the README.md at root for getting started.
 
 Install dependencies once from the repo root:
 

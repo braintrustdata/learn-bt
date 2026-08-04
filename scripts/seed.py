@@ -38,15 +38,12 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from agent.agent import run_agent
-from agent.config import BASE_URL
 from agent.fixtures import ACCOUNTS, OPPORTUNITIES
 
 load_dotenv()
 
 SCRATCH_DIR = Path(__file__).parent / ".seed_attachments"
 
-# Each fixture kind gets a short framing of what an AE would be doing with it, so
-# the generated request reads like a real ask rather than a bare data dump.
 FIXTURE_KINDS = {
     "account": (
         ACCOUNTS,
@@ -191,12 +188,15 @@ def main() -> None:
 
     rng = random.Random(args.seed)
 
-    # Routes through BASE_URL (the Braintrust gateway by default), same as the
-    # agent, so only BRAINTRUST_API_KEY is required.
-    client = OpenAI(
-        base_url=BASE_URL,
-        api_key=os.environ["BRAINTRUST_API_KEY"],
-    )
+    if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
+        client = OpenAI(
+            base_url=os.environ["BASE_URL"]
+        )
+    else:
+        client = OpenAI(
+            base_url=os.environ["BASE_URL"],
+            api_key=os.environ["BRAINTRUST_API_KEY"],
+        )
 
     # Draw all random choices up front on the single RNG so that a given --seed
     # produces the same workload regardless of --concurrency.
