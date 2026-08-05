@@ -35,6 +35,7 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
+source .venv/bin/activate
 ```
 
 This demo uses the Braintrust Gateway to handle all model routing. The Gateway allows using any SDK framework with any model, while all model providers are authenticated within Braintrust. This reduces the need for having to maintain provider secrets locally, and also allows us to swap models on the fly without worrying about code changes.

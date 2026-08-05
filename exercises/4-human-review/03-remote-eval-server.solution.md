@@ -39,9 +39,9 @@ project.parameters.create(
 )
 ```
 
-Push with `cd evals && bt functions push parameters.py`. `type: "prompt"` renders an editable prompt control that also owns the model dropdown and model parameters. `prompt` is a special parameter type. Parameters can be created for any Pydantic BaseModel, which is how `max_turns` gets a control of its own: the model wraps the value in a `value` field and Braintrust reads the type and description off it.
+Push with `bt functions push parameters.py`. `type: "prompt"` renders an editable prompt control that also owns the model dropdown and model parameters. `prompt` is a special parameter type. Parameters can be created for any Pydantic BaseModel, which is how `max_turns` gets a control of its own: the model wraps the value in a `value` field and Braintrust reads the type and description off it.
 
-## 2. Remote eval server (`evals/eval_remote_agent.py`)
+## 2. Remote eval server (`evals/eval_agent_remote_server.py`)
 
 ```python
 import sys
@@ -92,7 +92,7 @@ Eval(
 ## 3. Run
 
 ```bash
-bt eval evals/eval_remote_agent.py --dev
+bt eval evals/eval_agent_remote_server.py --dev
 ```
 
 Register the local dev server in a playground, then run the eval.

@@ -16,7 +16,7 @@ if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
     )
 else:
     judge_client = OpenAI(
-        base_url=os.environ["BASE_URL"]
+        base_url=os.environ["BASE_URL"],
         api_key=os.environ["BRAINTRUST_API_KEY"],
         default_headers={"x-bt-org-name": os.getenv("BRAINTRUST_ORG_NAME", "")},
     )

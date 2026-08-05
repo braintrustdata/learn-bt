@@ -25,7 +25,7 @@ Verify in the UI that the parameters appear and are editable.
 
 ### 2. Write the remote eval server
 
-In `evals/eval_remote_agent.py`, load the parameters and read their values off the
+In `evals/eval_agent_remote_server.py`, load the parameters and read their values off the
 `hooks` object to build an `AgentConfig`, including `max_turns`, and run the agent.
 Follow the attachment reading pattern implemented in the previous eval exercise.
 
@@ -34,7 +34,7 @@ Follow the attachment reading pattern implemented in the previous eval exercise.
 Start the dev server, open a playground, and execute an eval:
 
 ```bash
-bt eval evals/eval_remote_agent.py --dev
+bt eval evals/eval_agent_remote_server.py --dev
 ```
 
 In Braintrust, register the remote eval server source from Settings -> Remote Evals. Enter the host URL (default: `http://localhost:8300`), test the connection, and save. If all goes well, the server should be accessible in the Braintrust Playground. 
