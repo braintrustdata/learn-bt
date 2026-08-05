@@ -25,15 +25,14 @@ In the **SQL sandbox**:
 
 ```sql
 SELECT
-  created,
-  input,
-  output,
-  metrics.tokens AS tokens,
-  estimated_cost() AS cost
-FROM project_logs
-WHERE created >= now() - INTERVAL 7 DAY
-  AND span_attributes.name = 'agent_run'
-ORDER BY cost DESC
+  created AS run_time,
+  input.prompt AS request,
+  output AS response,
+  metrics.total_tokens AS total_tokens,
+  metrics.estimated_cost AS estimated_cost
+FROM project_logs('<project-id>', shape => 'summary')
+WHERE metrics.estimated_cost is not null and created >= NOW() - INTERVAL 7 day
+ORDER BY metrics.estimated_cost DESC
 LIMIT 100
 ```
 
@@ -51,3 +50,4 @@ Describe the query to a coding agent and have it run the same SQL through the
   a range filter on `created` and a `LIMIT`. The CLI enforces the same linter;
   pass `--force-ignore-linter` only for a query that is already selective and
   bounded.
+- There are 3 query shapes that SQL can query against: `spans`, `trace`, and `summary`. We use summary for this query because we want pre-aggregated metrics at the trace level, with one row per trace.
