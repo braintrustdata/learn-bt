@@ -31,7 +31,7 @@ Eval(
     experiment_name="email-drafting-eval",
     data=init_dataset(project=PROJECT, name=DATASET),
     task=task,
-    scores=[valid_email, email_goal_reached],
+    scores=[valid_email, email_goal_reached], #type: ignore
 )
 ```
 

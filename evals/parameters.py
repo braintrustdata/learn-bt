@@ -11,9 +11,12 @@ The reference implementation is in
 exercises/4-human-review/03-remote-eval-server.solution.md.
 """
 
+import sys
+from pathlib import Path
 import braintrust
 from pydantic import BaseModel, Field, create_model
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent.config import DEFAULT_CONFIG
 
 # project = braintrust.projects.create(name="learn-bt") #idempotent operation

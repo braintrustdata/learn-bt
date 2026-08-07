@@ -3,9 +3,12 @@
 ## 1. Parameters (`evals/parameters.py`)
 
 ```python
+import sys
+from pathlib import Path
 import braintrust
 from pydantic import BaseModel, Field
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent.config import DEFAULT_CONFIG
 
 project = braintrust.projects.create(name="learn-bt")
@@ -23,7 +26,7 @@ project.parameters.create(
     slug="sales-assistant-parameters",
     description="Tunable configuration for the Sales Assistant agent.",
     schema={
-        "main": {
+        "main": { #type: ignore
             "type": "prompt",
             "description": "Agent's main prompt",
             "default": {
