@@ -13,13 +13,9 @@ uv run python -m scripts.seed --count <int>
 
 ### 1. Instrument with the CLI and a coding agent
 
-Rather than writing the tracing code by hand, use the Braintrust CLI to drive your coding agent through the instrumentation. Note: before you do this, make sure to have initialized a git repo so agent changes can be safely discarded.From the repo root, run:
+Once agent skills are setup via the `bt setup` command from the previous exercise, we can use our coding agent directly to instrument this agent. 
 
-```bash
-bt setup instrument --agent <coding-agent> #[claude, codex, cursor, etc.]
-```
-
-This downloads the latest `instrument` workflow docs and hands them to the coding agent, which then uses its reasoning/judgement to instrument the Sales Assistant.
+Ask your agent of choice to instrument the Sales Assistant agent with Braintrust tracing.
 
 Then seed some traces and confirm they appear in your project:
 
@@ -31,8 +27,7 @@ Did it work? Open the logs (`bt view logs` or the Braintrust UI) and inspect a t
 If the coding agent instrumented correctly, you should see the agent run as the root span, 
 with model and tool calls nested underneath, without having written any per-call tracing code yourself.
 
-Now, undo the coding agent's changes (discard changes from git history). We will now 
-explore instrumenting via provider integration.
+Now, undo the coding agent's changes (discard changes from git history). We will now explore instrumenting tracing by hand, to understand how things work under the hood. With every exercise in this course, however, feel free to use a coding agent to solve the task. 
 
 ### 2. Provider wrapping and traced functions
 

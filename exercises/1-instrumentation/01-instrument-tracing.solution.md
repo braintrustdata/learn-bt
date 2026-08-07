@@ -2,20 +2,11 @@
 
 All changes are in `agent/agent.py`, `agent/tools.py`, and `agent/fixtures.py`.
 
-## 1. Instrument with the CLI and a coding agent
+## 1. Instrument with a coding agent
 
-Run the instrumentation flow from the repo root:
+Example prompt to provide a coding agent:
 
-```bash
-bt setup instrument --agent claude
-```
-
-`bt setup instrument` downloads the latest `instrument` workflow docs and runs your
-coding agent against them. Following those docs, the agent should initialize a logger
-and add spans for the agent run, the model calls, and the tool calls.
-
-Often, we need more granularity than what a coding agent picks on its own, hence we
-explore provider wrapping and custom logging below.
+> Instrument the sales assistant agent in this repo with Braintrust tracing.
 
 ## 2. Provider wrapping and traced functions
 
