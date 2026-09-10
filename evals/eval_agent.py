@@ -1,7 +1,7 @@
-"""Eval for the Sales Assistant (exercise 4.3).
+"""Eval for the Sales Assistant
 
-Run the agent over the `email-drafting` dataset from 4.1 and grade each drafted
-email with the scorers from 4.2. Run with:
+Run the agent over the `email-drafting` dataset and grade each drafted
+email with the scorers you created. Run with:
 
     bt eval evals/eval_agent.py
 

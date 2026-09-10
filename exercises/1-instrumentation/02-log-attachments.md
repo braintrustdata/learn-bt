@@ -1,4 +1,4 @@
-# 2.2 Log attachments
+# 1.2 Log attachments
 
 `wrap_openai` auto captures attachments on the `llm` span, nested inside the messages sent to the model. We can also log attachments manually using the Braintrust SDK. Here, it would be helpful to have the attachments logged on the root span (`run_agent()`) so that some workflows can be simplified, such as adding to logs to a dataset later.
 

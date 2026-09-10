@@ -1,4 +1,4 @@
-# 3.2 Analyze logs with Loop [UI]
+# 2.2 Analyze logs with Loop [UI]
 
 Loop is Braintrust's AI assistant for your data. Loop is accessible on most UI product surfaces and has context on what you are looking at. 
 

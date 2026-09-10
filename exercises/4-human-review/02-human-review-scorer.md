@@ -1,4 +1,4 @@
-# 5.2 Create a human review scorer [UI]
+# 4.2 Create a human review scorer [UI]
 
 ## Task
 

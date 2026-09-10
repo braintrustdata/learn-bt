@@ -1,4 +1,4 @@
-# 4.2 Create scorers
+# 3.2 Create scorers
 
 You have a dataset of real email-drafting requests. To evaluate the agent on
 them you need scorers: functions that grade each drafted email. A good eval pairs

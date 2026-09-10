@@ -1,4 +1,4 @@
-# 1.2 Set up the Braintrust CLI [CLI]
+# 0.1 Set up the Braintrust CLI [CLI]
 
 ## Task
 

@@ -1,4 +1,4 @@
-# 4.1 Curate a dataset
+# 3.1 Curate a dataset
 
 Before you can evaluate the agent, you need a set of test cases to run it
 against. In practice the best test cases are the requests real users already sent. So you curate them from production logs.

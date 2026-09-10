@@ -12,11 +12,11 @@ them in order. Each later section builds on the state you left the agent in.
 
 | Section | Folder | Theme |
 | --- | --- | --- |
-| 1 | `0-foundations` | Get oriented in Braintrust and the CLI |
-| 2 | `1-instrumentation` | Add tracing to the agent |
-| 3 | `2-monitoring` | Query and analyze logs to find quality issues |
-| 4 | `3-evals` | Curate datasets, build scorers, run evals |
-| 5 | `4-human-review` | Custom views, human review, remote evals |
+| 0 | `0-foundations` | Get oriented in Braintrust and the CLI |
+| 1 | `1-instrumentation` | Add tracing to the agent |
+| 2 | `2-monitoring` | Query and analyze logs to find quality issues |
+| 3 | `3-evals` | Curate datasets, build scorers, run evals |
+| 4 | `4-human-review` | Custom views, human review, remote evals |
 
 Each exercise is a markdown file with a task, and occasionally a short bit of
 background. Most exercises have a `solution.md` complement that includes one way to solve the exercise. 

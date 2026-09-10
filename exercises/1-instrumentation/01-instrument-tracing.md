@@ -1,4 +1,4 @@
-# 2.1 Instrument the agent with Braintrust tracing
+# 1.1 Instrument the agent with Braintrust tracing
 
 The agent in `agent/` has no tracing yet. Add it three ways, seeding a few traces after
 each so you can see how the spans come across.

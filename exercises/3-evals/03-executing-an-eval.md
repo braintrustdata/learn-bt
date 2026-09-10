@@ -1,7 +1,7 @@
-# 4.3 Execute an eval
+# 3.3 Execute an eval
 
 Put the last two exercises together: run the agent over the `email-drafting`
-dataset from 4.1 and grade each drafted email with the scorers from 4.2.
+dataset from 3.1 and grade each drafted email with the scorers from 3.2.
 
 ## Task
 

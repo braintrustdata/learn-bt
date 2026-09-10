@@ -2,7 +2,7 @@
 
 ## 1. Filter for logs with attachments
 
-The flag from 2.1 is on the root span, which is the row the Logs table shows, so the
+The flag from 1.1 is on the root span, which is the row the Logs table shows, so the
 filter reads straight off it:
 ```sql
 metadata.has_attachments = true
@@ -11,7 +11,7 @@ Alternatively, you can generate this filter by asking Loop in the filter modal.
 
 The attachment itself lives on the `llm` span, nested inside the messages sent to the
 model. Filtering on that payload directly would mean matching a path whose position
-shifts with the number of turns and content parts, which is exactly why 2.1 tags the run
+shifts with the number of turns and content parts, which is exactly why 1.1 tags the run
 with a flag instead.
 
 ## 2. Fuzzy search for one opportunity

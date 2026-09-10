@@ -1,4 +1,4 @@
-# 3.1 Query logs with filters, SQL, and the CLI [UI + CLI]
+# 2.1 Query logs with filters, SQL, and the CLI [UI + CLI]
 
 First, seed a good volume of logs to query:
 
@@ -10,7 +10,7 @@ This may take a couple minutes to complete. Each seeded run is an account execut
 
 ## Task
 
-1. **Filter for logs with attachments.** We want to view only logs with attachments to inspect the traces further. In 2.1 you logged a `has_attachments` metadata flag on each run's root span. On the **Logs** page, add a filter that uses it to show only the logs that carried an attachment.
+1. **Filter for logs with attachments.** We want to view only logs with attachments to inspect the traces further. In 1.1 you logged a `has_attachments` metadata flag on each run's root span. On the **Logs** page, add a filter that uses it to show only the logs that carried an attachment.
 
 2. **Fuzzy search for one opportunity.** Sometimes, we need to do a fuzzy full text search to filter logs. Use the search box on the Logs page to find the runs about a single opportunity. Search by its name or id (for example "Northwind EU expansion" or `OPP-5001`).
 

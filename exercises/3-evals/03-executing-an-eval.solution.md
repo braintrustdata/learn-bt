@@ -43,7 +43,7 @@ bt eval evals/eval_agent.py
 
 ## Notes
 
-- `init_dataset` loads the `email-drafting` dataset from 4.1. Each row's `input`
+- `init_dataset` loads the `email-drafting` dataset from 3.1. Each row's `input`
   (`{"prompt": ...}`) runs through the task.
 - `init_dataset` hydrates any
   saved attachment into a `ReadonlyAttachment`, so the task reads its bytes
@@ -52,6 +52,6 @@ bt eval evals/eval_agent.py
   need to surface the drafted email: the scorers do that themselves. Because the
   agent is instrumented, each run produces a trace, and `valid_email` and
   `email_goal_reached` filter that trace to the `draft_email` span to grade the
-  email (see 4.2).
-  the same scorers you pushed in 4.2. Braintrust passes each the run's `trace`.
+  email (see 3.2).
+  the same scorers you pushed in 3.2. Braintrust passes each the run's `trace`.
 - Tip: Use `bt eval --first 3 evals/eval_agent.py` for a fast smoke run.

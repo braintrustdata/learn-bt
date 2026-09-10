@@ -1,4 +1,4 @@
-# 5.3 Set up a remote eval server
+# 4.3 Set up a remote eval server
 
 Expose the agent's config as parameters so it can be tuned from a playground,
 without touching code. A remote eval loads a saved parameters object and runs
