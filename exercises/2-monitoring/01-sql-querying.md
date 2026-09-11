@@ -6,6 +6,11 @@ First, seed a good volume of logs to query:
 uv run python -m scripts.seed --count 100 --attachment-ratio 0.2 --concurrency 10
 ```
 
+Running seed here will make LLM calls. If you do not want to do that, run seed_default to log a preset of 100 traces:
+```bash
+uv run --env-file .env python -m scripts.seed_default --project <name>
+```
+
 This may take a couple minutes to complete. Each seeded run is an account executive's request to the sales assistant. Some requests reference a specific opportunity (for example `OPP-5001`, "Northwind EU expansion"), and roughly 20% arrive with an attachment.
 
 ## Task
