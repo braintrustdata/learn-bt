@@ -1,42 +1,78 @@
 # 2.1 Query logs with filters, SQL, and the CLI [UI + CLI]
 
-First, seed a good volume of logs to query:
+This exercise uses the traces you instrumented in Section 1. You will answer the same question with a Logs filter, SQL, and the CLI.
 
-```bash
+## Step 1: Create enough traffic
+
+From the repository root, run:
+
+~~~bash
 uv run python -m scripts.seed --count 100 --attachment-ratio 0.2 --concurrency 10
-```
+~~~
 
-Running seed here will make LLM calls. If you do not want to do that, run seed_default to log a preset of 100 traces:
-```bash
-uv run --env-file .env python -m scripts.seed_default --project <name>
-```
+Each seeded run is an account-executive request to the Sales Assistant. About 20% include an attachment. This command makes model calls.
 
-This may take a couple minutes to complete. Each seeded run is an account executive's request to the sales assistant. Some requests reference a specific opportunity (for example `OPP-5001`, "Northwind EU expansion"), and roughly 20% arrive with an attachment.
+For a predictable workload without model calls, replay the included snapshot:
 
-## Task
+~~~bash
+uv run --env-file .env python -m scripts.seed_default --project learn-bt
+~~~
 
-1. **Filter for logs with attachments.** We want to view only logs with attachments to inspect the traces further. In 1.1 you logged a `has_attachments` metadata flag on each run's root span. On the **Logs** page, add a filter that uses it to show only the logs that carried an attachment.
+Wait for the command to finish before querying.
 
-2. **Fuzzy search for one opportunity.** Sometimes, we need to do a fuzzy full text search to filter logs. Use the search box on the Logs page to find the runs about a single opportunity. Search by its name or id (for example "Northwind EU expansion" or `OPP-5001`).
+## Step 2: Filter attachment-bearing runs
 
-3. **Export a batch of logs for offline analysis.** A teammate wants to review
-   the agent's responses offline in a spreadsheet. Go to the **SQL sandbox** and
-   write a query against `project_logs` that returns exactly what a reviewer
-   needs, one row per run:
+Open **learn-bt**, then **Logs**. Add a filter to the root spans:
 
-   - the time the run happened,
-   - the request that came in,
-   - the response the agent produced,
-   - the tokens it used, and
-   - the estimated cost.
+~~~sql
+metadata.has_attachments = true
+~~~
 
-   Scope it to the last 7 days, put the most expensive runs first, and return
-   one row per trace (not one row per span). Then use the **download** button to
-   export the results as CSV.
+Open one result and confirm that its root input contains the attachment you added in Exercise 1.2. The boolean filter is faster than opening every nested LLM span.
 
-   The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the
-   available columns and functions.
+## Step 3: Search for one business context
 
-4. **Fetch the same data from a coding agent.** Take the query from step 3,
-   describe what it should return to a coding agent, and have the agent run it
-   against the project with the `bt` CLI.
+In the Logs search box, enter an opportunity ID or name:
+
+~~~text
+OPP-5001
+~~~
+
+Or:
+
+~~~text
+Northwind EU expansion
+~~~
+
+Open a matching trace. Search is useful when you know the situation you want to investigate but did not record it as structured metadata.
+
+## Step 4: Export one row per run with SQL
+
+Open the **SQL sandbox**. Start with this query:
+
+~~~sql
+SELECT
+  created,
+  input.prompt AS request,
+  output.output AS response,
+  metrics.tokens AS tokens,
+  metrics.estimated_cost AS estimated_cost
+FROM project_logs('learn-bt')
+WHERE is_root = true
+  AND created >= NOW() - INTERVAL '7 days'
+ORDER BY metrics.estimated_cost DESC
+~~~
+
+Run it, then select **Download** to export a CSV. The root-span condition matters. Without it, each LLM and tool span becomes a separate row.
+
+If your root input or output has a different shape, inspect one trace and adjust the input or output fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.
+
+## Step 5: Run the same query with the CLI
+
+From the repository root, run:
+
+~~~bash
+bt sql "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE is_root = true AND created >= NOW() - INTERVAL '7 days' ORDER BY metrics.estimated_cost DESC" --env-file .env
+~~~
+
+Compare the terminal result with your CSV. Both should show one row per agent run in the same cost order. The UI is useful for exploration. The CLI is useful in scripts and coding-agent workflows.

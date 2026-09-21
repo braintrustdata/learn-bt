@@ -1,22 +1,83 @@
 # 3.1 Curate a dataset
 
-Before you can evaluate the agent, you need a set of test cases to run it
-against. In practice the best test cases are the requests real users already sent. So you curate them from production logs.
+Turn real agent traces into a focused dataset for one behavior: drafting customer emails. Create a dataset named **email-drafting**. You will use it in the next two exercises.
 
-Datasets are commonly built for specific scenarios. Here, we're going to build a dataset using 3 common patterns for scenarios where our agent needs to draft emails. 
+## Step 1: Add a few traces by hand
 
-Create a dataset `email-drafting`.
+Open **learn-bt**, then **Logs**. Filter to traces that contain the **draft_email** tool span:
 
-## Task
+~~~sql
+any_span(span_attributes.name = 'draft_email')
+~~~
 
-1. **Curate by hand from the UI.** On the **Logs** page, filter to the runs where the agent drafted an email (the `draft_email` tool was called). Open a few good ones, look at the request that came in, and use **Add to dataset** to add them to `email-drafting`.
+Open several matching runs. For each good example, select the root span, choose **Add to dataset**, then create or select **email-drafting**.
 
-2. **Curate with Loop.** Manually adding spans to a dataset from the UI is quick and easy, but limited. For example, it's hard to do in bulk, and we cannot transform the span before we add it. Next we'll look at how Loop can assist with this task. Ask **Loop** to find more email-drafting runs and add them to `email-drafting` for you. A coding agent driving the `bt` CLI can do the same job.
+Choose examples that genuinely test email drafting. This is deliberate curation, not a random export of all traffic.
 
-3. **Curate with a dataset pipeline.** The previous methods don't offer much flexibility in doing this in bulk in a granular way. Often, we need to transform/preprocess the span or trace before adding it to a dataset. A dataset pipeline bridges that gap. A dataset pipeline has a source (which logs to read), a transform (how to turn each into a dataset row), and a target (which dataset, and optionally project, to write to). Fill in [`evals/dataset_pipeline.py`](../../evals/dataset_pipeline.py) so it filters for the same email-drafting traces and writes them to `email-drafting`. Here, however, we want to transform the span before adding it to our dataset. In our input we just want to preserve the user prompt. In the metadata, save the drafted email in the log to `metadata.original_reference`.  
+## Step 2: Use Loop to expand coverage
 
-   See the
-   [dataset pipelines docs](https://www.braintrust.dev/docs/annotate/datasets/pipelines).
+Open Loop from the Logs page and enter:
+
+~~~text
+Find more runs where the agent drafted a customer email. Add good, diverse
+examples to the email-drafting dataset.
+~~~
+
+Inspect a few rows that Loop adds. Hand curation gives you a high-confidence starting set. Loop can expand coverage without requiring inspection of every trace.
+
+## Step 3: Add the repeatable pipeline
+
+Open **evals/dataset_pipeline.py**. Replace the commented-out template with:
+
+~~~python
+from braintrust import DatasetPipeline
+
+
+async def transform(id=None, input=None, output=None, metadata=None, expected=None, trace=None):
+    spans = await trace.get_spans()
+
+    root = next(s for s in spans if s.is_root)
+    draft = next(
+        s for s in spans if (s.span_attributes or {}).get("name") == "draft_email"
+    )
+
+    row_input = {"prompt": root.input["prompt"]}
+    attachments = root.input.get("attachments")
+    if attachments:
+        row_input["attachment"] = attachments[0]
+
+    return {
+        "input": row_input,
+        "metadata": {"original_reference": draft.output["email"]},
+    }
+
+
+DatasetPipeline(
+    name="email-drafting-pipeline",
+    source={
+        "project_name": "learn-bt",
+        "filter": 'any_span(span_attributes.name = "draft_email")',
+        "scope": "trace",
+    },
+    transform=transform,
+    target={
+        "project_name": "learn-bt",
+        "dataset_name": "email-drafting",
+    },
+)
+~~~
+
+The filter selects whole traces that contain an email draft. The transform runs once per trace, keeps the original request compact, preserves a file reference when present, and saves the original email as review context.
+
+## Step 4: Run and inspect it
+
+From the repository root, run:
+
+~~~bash
+bt datasets pipeline run evals/dataset_pipeline.py --limit 20 --window 30d --env-file .env
+~~~
+
+Open **Datasets**, then **email-drafting**. Confirm that each row has **input.prompt**, optionally has **input.attachment**, and has the original email under **metadata.original_reference**.
 
 ## Solution
 
