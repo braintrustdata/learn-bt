@@ -40,6 +40,8 @@ metadata.has_attachments = true
 
 Open one result and confirm that its root input contains the attachment you added in Exercise 1.2. The boolean filter is faster than opening every nested LLM span.
 
+![Attachment-bearing agent runs filtered in Braintrust Logs](assets/02-filter-attachment-runs.png)
+
 ## Step 3: Search for one business context
 
 In the Logs search box, enter an opportunity ID or name:
