@@ -4,34 +4,27 @@ This exercise uses the traces you instrumented in Section 1. You will answer the
 
 ## Step 1: Create enough traffic
 
-From the repository root, run:
+From the repository root, run either 1 of the 2 following commands:
 
+Option 1:
 ~~~bash
 uv run python -m scripts.seed --count 100 --attachment-ratio 0.2 --concurrency 10
 ~~~
 
-This creates up to 100 synthetic, production-style agent runs in your
-`learn-bt` project. It does not send real production traffic. Each successful
-run produces one `agent_run` root trace, with its LLM and tool work nested
-underneath. About 20% of the runs include an attachment, and up to 10 run at a
-time.
-
-This command makes model calls. `scripts.seed` uses `gpt-4o-mini` by default
-to generate each synthetic account-executive request. The Sales Assistant also
-uses `gpt-4o-mini` by default to handle that request. A run that uses tools can
-make more than one Sales Assistant model call.
-
-For a predictable workload without model calls, replay the included snapshot:
-
+Option 2:
 ~~~bash
 uv run --env-file .env python -m scripts.seed_default --project learn-bt
 ~~~
 
-This does not call a model provider. It reads the recorded spans and attachment
+`scripts.seed` (Option 1) creates up to 100 synthetic agent runs in your
+`learn-bt` project using `gpt-4o-mini` (through the Braintrust Gateway)
+to generate each account-executive request. The Sales Assistant also
+uses `gpt-4o-mini` by default to handle that request.
+
+If you want something quicker and cheaper, you can use `scripts.seed_default` (Option 2). This does not call a model provider. It reads the recorded spans and attachment
 files bundled in `scripts/seed_default/snapshot/`, uploads the attachments to
 your Braintrust org, gives the spans current timestamps, and inserts them into
-the `learn-bt` project. It still makes Braintrust API calls, but it does not
-generate new requests or agent responses.
+the `learn-bt` project.
 
 Wait for the command to finish before querying.
 
@@ -91,3 +84,5 @@ bt sql "SELECT created, input.prompt AS request, output.output AS response, metr
 ~~~
 
 Compare the terminal result with your CSV. Both should show one row per agent run in the same cost order. The UI is useful for exploration. The CLI is useful in scripts and coding-agent workflows.
+
+![Replayed agent runs in Braintrust Logs](assets/01-replayed-logs-list.png)
