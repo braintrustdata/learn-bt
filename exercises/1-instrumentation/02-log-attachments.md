@@ -52,6 +52,7 @@ root span, `input.attachments` should show a previewable PDF or image.
 
 ![Root agent run showing a previewable customer-message attachment](assets/02-root-span-attachment-preview.png)
 
-## Solution
+## Answer key
 
-See [02-log-attachments.solution.md](02-log-attachments.solution.md).
+Compare your completed [`agent/agent.py`](02-log-attachments.solution/agent/agent.py)
+with this answer key.

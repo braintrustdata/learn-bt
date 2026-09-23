@@ -242,6 +242,10 @@ In a trace confirm both of the following:
 
 ![Custom search_docs span showing the trimmed query and result summary](assets/04-custom-search-docs-span.png)
 
-## Solution
+## Answer key
 
-See [01-instrument-tracing.solution.md](01-instrument-tracing.solution.md).
+Compare your completed source files with:
+
+- [`agent/agent.py`](01-instrument-tracing.solution/agent/agent.py)
+- [`agent/tools.py`](01-instrument-tracing.solution/agent/tools.py)
+- [`agent/fixtures.py`](01-instrument-tracing.solution/agent/fixtures.py)
