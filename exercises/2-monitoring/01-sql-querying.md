@@ -72,14 +72,15 @@ SELECT
   metrics.tokens AS tokens,
   metrics.estimated_cost AS estimated_cost
 FROM project_logs('learn-bt')
-WHERE is_root = true
-  AND created >= NOW() - INTERVAL '7 days'
-ORDER BY metrics.estimated_cost DESC
+WHERE is_root = TRUE AND created >= NOW() - INTERVAL 7 DAY AND created >= NOW() - INTERVAL 7 day
+ORDER BY estimated_cost DESC
 ~~~
 
 Run it, then select **Download** to export a CSV. The root-span condition matters. Without it, each LLM and tool span becomes a separate row.
 
 If your root input or output has a different shape, inspect one trace and adjust the input or output fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.
+
+![SQL sandbox query exporting one row per root agent run](assets/04-export-root-runs-sql.png)
 
 ## Step 5: Run the same query with the CLI
 
