@@ -28,6 +28,8 @@ the `learn-bt` project.
 
 Wait for the command to finish before querying.
 
+![Replayed agent runs in Braintrust Logs](assets/01-replayed-logs-list.png)
+
 ## Step 2: Filter attachment-bearing runs
 
 Open **learn-bt**, then **Logs**. Add a filter to the root spans:
@@ -84,5 +86,3 @@ bt sql "SELECT created, input.prompt AS request, output.output AS response, metr
 ~~~
 
 Compare the terminal result with your CSV. Both should show one row per agent run in the same cost order. The UI is useful for exploration. The CLI is useful in scripts and coding-agent workflows.
-
-![Replayed agent runs in Braintrust Logs](assets/01-replayed-logs-list.png)
