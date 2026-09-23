@@ -1,43 +1,118 @@
 # 4.3 Set up a remote eval server
 
-Expose the agent's config as parameters so it can be tuned from a playground,
-without touching code. A remote eval loads a saved parameters object and runs
-locally while the UI drives it.
+Expose the Sales Assistant configuration as saved parameters, then run the agent locally from a Braintrust Playground. This lets reviewers compare prompt, model, and turn-limit changes without editing code for every trial.
 
-## Task
+## Step 1: Create the saved parameters
 
-### 1. Create and push a parameters object
+Open **evals/parameters.py**. Remove the unused **create_model** import. Replace the commented-out template with:
 
-In `evals/parameters.py`, build a parameters object from the agent's `config.py`.
-Use a `prompt` parameter for the system prompt so it gets an editable prompt
-control in the UI; the prompt parameter also carries the model name.
+~~~python
+project = braintrust.projects.create(name="learn-bt")
 
-Add `max_turns` as a second parameter. Any valid Pydantic schema can be rendered as a parameter, which the UI displays as a controllable input. `prompt` and `model` are special paramaeter types that render the associated UI.
 
-Push these parameters to Braintrust via:
+class MaxTurnsParam(BaseModel):
+    value: int = Field(
+        default=DEFAULT_CONFIG.max_turns,
+        description="The most model calls a single agent run may make.",
+    )
 
-```bash
+
+project.parameters.create(
+    name="Sales Assistant Parameters",
+    slug="sales-assistant-parameters",
+    description="Tunable configuration for the Sales Assistant agent.",
+    schema={
+        "main": {
+            "type": "prompt",
+            "description": "Agent's main prompt",
+            "default": {
+                "prompt": {
+                    "type": "chat",
+                    "messages": DEFAULT_CONFIG.system_prompt_messages,
+                },
+                "options": {"model": DEFAULT_CONFIG.model},
+            },
+        },
+        "max_turns": MaxTurnsParam,
+    },
+)
+~~~
+
+The prompt parameter renders an editable prompt and model control. **MaxTurnsParam** exposes a separate runtime safety limit.
+
+Push from inside **evals**:
+
+~~~bash
 cd evals
-bt functions push parameters.py
-```
+bt functions push parameters.py --env-file ../.env
+~~~
 
-Verify in the UI that the parameters appear and are editable.
+In Braintrust, confirm that the prompt, model, and maximum-turn controls are editable.
 
-### 2. Write the remote eval server
+## Step 2: Write the remote eval task
 
-In `evals/eval_agent_remote_server.py`, load the parameters and read their values off the
-`hooks` object to build an `AgentConfig`, including `max_turns`, and run the agent.
-Follow the attachment reading pattern implemented in the previous eval exercise.
+Open **evals/eval_agent_remote_server.py**. Add these imports below the path setup:
 
-### 3. Run it
+~~~python
+from braintrust import Eval, load_parameters
 
-Start the dev server, open a playground, and execute an eval:
+from agent.agent import InputFile, run_agent
+from agent.config import AgentConfig
+from scorers import email_goal_reached, valid_email
 
-```bash
-bt eval evals/eval_agent_remote_server.py --dev
-```
+PROJECT = "learn-bt"
+saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
+~~~
 
-In Braintrust, register the remote eval server source from Settings -> Remote Evals. Enter the host URL (default: `http://localhost:8300`), test the connection, and save. If all goes well, the server should be accessible in the Braintrust Playground. 
+Replace the commented-out task and eval template with:
+
+~~~python
+def task(input, hooks):
+    prompt_param = hooks.parameters["main"]
+    system_prompt_messages = [
+        message.as_dict() for message in prompt_param.prompt.messages
+    ]
+
+    config = AgentConfig(
+        model=prompt_param.options.get("model"),
+        system_prompt_messages=system_prompt_messages,
+        max_turns=hooks.parameters["max_turns"],
+    )
+
+    attachments = []
+    attachment = input.get("attachment")
+    if attachment is not None:
+        attachments.append(InputFile.from_dataset_attachment(attachment))
+
+    return run_agent(input["prompt"], attachments=attachments, config=config).output
+
+
+Eval(
+    PROJECT,
+    data=[],
+    task=task,
+    scores=[valid_email, email_goal_reached],  # type: ignore
+    parameters=saved_parameters,
+)
+~~~
+
+The Playground sends parameter values through **hooks.parameters**. The task converts those values to the app's **AgentConfig**, while the agent and scorers remain version-controlled locally.
+
+## Step 3: Start and register the server
+
+From the repository root, run:
+
+~~~bash
+bt eval evals/eval_agent_remote_server.py --dev --env-file .env
+~~~
+
+Leave that command running. In Braintrust, open **Settings**, then **Remote Evals**. Register a source with:
+
+~~~text
+http://localhost:8300
+~~~
+
+Test the connection and save the source. Open a Playground, select the remote eval source, choose a dataset, and run it. The agent runs locally while results and parameter changes remain visible in Braintrust.
 
 ## Solution
 

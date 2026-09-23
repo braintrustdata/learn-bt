@@ -1,70 +1,251 @@
 # 1.1 Instrument the agent with Braintrust tracing
 
-The agent in `agent/` has no tracing yet. Add it three ways, seeding a few traces after
-each so you can see how the spans come across.
+The agent in `agent/` has no tracing yet. You will add it in four small stages
+and seed traces after each one. This makes it clear what each change adds.
 
-Seed traces with:
+`scripts.seed` is a traffic generator, not tracing code. For each run, it
+selects an account or opportunity fixture, asks an LLM to write a realistic
+account-executive request, and passes that request to `run_agent()`.
 
-```bash
-uv run python -m scripts.seed --count <int>
+## Step 1: Log model spans
+
+Open `agent/agent.py`. First, add the Braintrust imports alongside the existing
+third-party imports:
+
+```python
+import braintrust
+from braintrust import wrap_openai
 ```
 
-## Task
+Then initialize a logger immediately after `load_dotenv()`:
 
-### 1. Instrument with the CLI and a coding agent
+```python
+load_dotenv()
+braintrust.init_logger(project="learn-bt")
+```
 
-Once agent skills are setup via the `bt setup` command from the previous exercise, we can use our coding agent directly to instrument this agent. 
+The API key in `.env` selects your org. `project="learn-bt"` selects the
+project within that org where these spans are written.
 
-Ask your agent of choice to instrument the Sales Assistant agent with Braintrust tracing.
+Finally, update both branches of `get_client()` so each `OpenAI` client is
+wrapped. Change this pattern:
 
-Then seed some traces and confirm they appear in your project:
+```python
+return OpenAI(
+    # existing arguments
+)
+```
+
+To this pattern:
+
+```python
+return wrap_openai(
+    OpenAI(
+        # keep the existing arguments unchanged
+    )
+)
+```
+
+`wrap_openai()` observes every `chat.completions.create()` call made through
+that client. You do not need to add logging around individual model calls.
+
+Run five seeded requests:
 
 ```bash
 uv run python -m scripts.seed --count 5
 ```
 
-Did it work? Open the logs (`bt view logs` or the Braintrust UI) and inspect a trace. 
-If the coding agent instrumented correctly, you should see the agent run as the root span, 
-with model and tool calls nested underneath, without having written any per-call tracing code yourself.
+Open **learn-bt**, then **Logs**, in Braintrust. Open one recent row. You
+should see an `llm` span named **Chat Completion** with model, token, latency,
+and cost information. At this stage, each LLM span is its own trace. You will
+give the whole agent run a root span in Step 3.
 
-Now, undo the coding agent's changes (discard changes from git history). We will now explore instrumenting tracing by hand, to understand how things work under the hood. With every exercise in this course, however, feel free to use a coding agent to solve the task. 
+![Standalone Chat Completion LLM span in Braintrust Logs](assets/01-log-model-spans.png)
 
-### 2. Provider wrapping and traced functions
+## Step 2: Observe automatic attachment capture
 
-The Braintrust SDK provides wrapper integrations for most of the common agent frameworks
-and model providers. Our agent calls the OpenAI client directly, so wrap that client with
-`wrap_openai()` where it is built in `agent/agent.py`. You also need somewhere for the
-spans to go, so call `init_logger()` at the top level of the module.
+Keep the code unchanged. Run the seed command again, this time with an
+attachment on every request:
 
-Seed some traces and look at how they appear. Every model call the agent makes is now an
-`llm` span, with metrics automatically parsed.
+```bash
+uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
+```
 
-The wrapper also captures attachments. Seed with `--attachment-ratio 1.0` and any file
-sent to the model, such as a PDF or image, is logged as an `Attachment` and previews in
-the trace, again with no extra code.
+The seeder asks an LLM to write a customer message, then alternates between a
+PDF and PNG version of that message. `run_agent()` sends the file to the model.
+Because the client is wrapped, Braintrust stores it as an `Attachment` on the
+nested `llm` span.
 
-What this doesn't give us is the trace structure. An agent run is several different steps, and logically we want to associate these all with a single trace. A trace should be a unique agent run. We can trace all of the intermediate functions and tool calls via the `@traced` decorator. This decorator automatically captures input and output of the decorated function as a span, and nests the span in its proper trace heirarchy. Pass `type` and `name` parameters to the decorator to control how the span appears:
+In **Logs**, open a recent **Chat Completion** span. Its input should contain a
+previewable PDF or image attachment. The attachment represents forwarded customer context.
 
-- `run_agent` in `agent/agent.py` is the root span of a run. Give it `type="task"` and
-  `name="agent_run"`.
-- each tool function in `agent/tools.py` gets `type="tool"`.
-- the business logic functions (`find_accounts()` and `search_docs()`) in `agent/fixtures.py`
+![Chat Completion span showing an automatically captured PDF attachment](assets/02-automatic-attachment-capture.png)
 
-Seed again. Spans nest by execution, so each trace should now be one `agent_run` root span
-with the model and tool calls underneath it, in the order the agent made them.
+## Step 3: Add trace structure
 
-### 3. Log a custom span
+The wrapped client records model calls, but it does not know which model calls,
+tools, and helper functions belong to one agent run. Add `@traced` decorators
+to create that hierarchy.
 
-`@traced` auto captures a function's arguments and return value. Often This is helpful for most scenarios, but sometimes we want to control what gets logged more granularly, or add additional metdata to the sapn.
-an extra field, or less than the full input and output. We can achieve this via the `current_span().log()` method. This method manaully logs additional, arbitrary data on the currently active span. This gets merged with anything else that's already captured on the span.
+### Make `run_agent()` the root span
 
-We want to be able to easily denote agent runs that work with attachments. In `run_agent()` log a metadata field called `has_attachments : bool` that is `True` if the agent run is working with attachments.
+In `agent/agent.py`, extend the Braintrust import:
 
-We can also prevent `@traced` from auto capturing the input and output.
-`search_docs` currently returns the full matching documents, including their entire bodies, which is more than you want on the span. Pass `notrace_io=True` to its decorator and call `current_span().log()` to log a trimmed output instead, such as the number of hits and the matched document ids, along with the matched search terms as metadata. Seed some more traces and compare how `search_docs` now logs against the automatic capture on `find_accounts`.
+```python
+from braintrust import traced, wrap_openai
+```
 
+Then add this decorator directly above `run_agent()`:
 
+```python
+@traced(type="task", name="agent_run")
+def run_agent(...):
+```
 
-## Solution
+One call to `run_agent()` is now one root `agent_run` span.
 
-See [01-instrument-tracing.solution.md](01-instrument-tracing.solution.md).
+### Mark the agent tools
+
+Open `agent/tools.py`. Add this import:
+
+```python
+from braintrust import traced
+```
+
+Add `@traced(type="tool")` directly above each of these functions:
+
+```python
+@traced(type="tool")
+def lookup_customer(...):
+
+@traced(type="tool")
+def get_opportunity(...):
+
+@traced(type="tool")
+def search_knowledge_base(...):
+
+@traced(type="tool")
+def draft_email(...):
+
+@traced(type="tool")
+def update_crm_record(...):
+```
+
+The type makes the purpose of each span clear in the trace UI.
+
+### Trace the fixture helpers
+
+Open `agent/fixtures.py`. Add this import:
+
+```python
+from braintrust import traced
+```
+
+Then add the basic decorator above both helper functions:
+
+```python
+@traced
+def find_accounts(...):
+
+@traced
+def search_docs(...):
+```
+
+For now, let the decorator capture each helper's normal input and output. You
+will take control of `search_docs()` data in the next step.
+
+Run the seed command again:
+
+```bash
+uv run python -m scripts.seed --count 5
+```
+
+In **Logs**, open one new trace. It should have an `agent_run` task root, with
+LLM, tool, and fixture spans nested underneath.
+
+- `agent_run` is the task root for one complete agent run.
+- `Chat Completion` span is nested LLM work.
+- `draft_email`, `update_crm_record`, and `lookup_customer`
+  appear as tool spans.
+- `find_accounts` or `search_docs` appears as a helper span
+
+![Agent run root span with nested LLM and tool spans](assets/03-agent-run-trace-structure.png)
+
+## Step 4: Log useful custom data
+
+`@traced` captures function arguments and return values automatically. Use
+`current_span().log()` when you need an extra field for filtering or a smaller,
+safer representation of large data.
+
+### Mark runs that include attachments
+
+In `agent/agent.py`, change the Braintrust import to include `current_span`:
+
+```python
+from braintrust import current_span, traced, wrap_openai
+```
+
+Inside `run_agent()`, find the existing `input_files` list. Immediately after
+it, add:
+
+```python
+current_span().log(metadata={"has_attachments": bool(attachments)})
+```
+
+This puts one boolean on the root `agent_run` span. You can later filter for
+file-bearing runs without opening each nested LLM span.
+
+### Trim the knowledge-base search output
+
+`search_docs()` returns full document bodies. The agent needs those bodies, but
+the trace only needs enough information to explain which documents matched.
+
+In `agent/fixtures.py`, change the import and decorator:
+
+```python
+from braintrust import current_span, traced
+
+@traced(notrace_io=True)
+def search_docs(query: str) -> list[dict]:
+```
+
+`notrace_io=True` turns off the decorator's automatic input and output capture
+for this function only. Just before `return hits`, add:
+
+```python
+current_span().log(
+    input={"query": query},
+    output={"num_hits": len(hits), "doc_ids": [d["id"] for d in hits]},
+    metadata={"matched_terms": terms},
+)
+```
+
+This preserves the query, matching terms, hit count, and document IDs without
+writing entire knowledge-base documents to the trace.
+
+Run the final seed command:
+
+```bash
+uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
+```
+
+In a trace confirm both of the following:
+
+1. The root `agent_run` span has `metadata.has_attachments`. It is `true` for runs with an attachment and `false` otherwise.
+
+2. For one of the  `search_docs` child spans beneath, you should see:
+
+- Input with only the `query`.
+- Output with `num_hits` and `doc_ids`.
+- Metadata with `matched_terms`.
+- No full document `body`.
+
+![Custom search_docs span showing the trimmed query and result summary](assets/04-custom-search-docs-span.png)
+
+## Answer key
+
+Compare your completed source files with:
+
+- [`agent/agent.py`](01-instrument-tracing.solution/agent/agent.py)
+- [`agent/tools.py`](01-instrument-tracing.solution/agent/tools.py)
+- [`agent/fixtures.py`](01-instrument-tracing.solution/agent/fixtures.py)

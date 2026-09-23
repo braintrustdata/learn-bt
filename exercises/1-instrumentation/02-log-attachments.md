@@ -1,17 +1,58 @@
-# 1.2 Log attachments
+# 1.2 Log attachments on the root span
 
-`wrap_openai` auto captures attachments on the `llm` span, nested inside the messages sent to the model. We can also log attachments manually using the Braintrust SDK. Here, it would be helpful to have the attachments logged on the root span (`run_agent()`) so that some workflows can be simplified, such as adding to logs to a dataset later.
+Exercise 1.1 showed that `wrap_openai()` automatically captures attachments on
+the nested LLM span. In this exercise, you will also log the attachment on the
+root `agent_run` span. That makes the file visible when you filter logs, review
+a run, or add the run to a dataset.
 
-## Task
+## Step 1: Import `Attachment`
 
-The `Attachment` class takes a file path or raw bytes plus a filename and content type, and uploads the file to the attachment store.
+In `agent/agent.py`, change the Braintrust import to include `Attachment`:
 
-In `run_agent`, log the run's attachments to the root span's input as `Attachment`
-objects.
+```python
+from braintrust import Attachment, current_span, traced, wrap_openai
+```
 
-Seed with `--attachment-ratio 1.0` and open a trace. The root span input should now show
-a previewable file rather than the path it was read from.
+`Attachment` stores file bytes in Braintrust's attachment store and records a
+reference in the span input.
 
-## Solution
+## Step 2: Replace the root-span log call
 
-See [02-log-attachments.solution.md](02-log-attachments.solution.md).
+`run_agent()` already converts every file path or dataset attachment into an
+`InputFile` in `input_files`. Replace the metadata-only log call with this:
+
+```python
+current_span().log(
+    input={
+        "attachments": [
+            Attachment(data=f.data, filename=f.filename, content_type=f.media_type)
+            for f in input_files
+        ]
+    },
+    metadata={"has_attachments": bool(attachments)},
+)
+```
+
+Use `input_files`, not the raw `attachments` argument. That single list already
+handles a local path and an attachment hydrated from a dataset row.
+
+Keep `has_attachments`. The boolean gives you a fast filter. The attachment in
+the root input gives a reviewer the actual file to open.
+
+## Step 3: Run and inspect it
+
+Seed requests that all include a file:
+
+```bash
+uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
+```
+
+Open **learn-bt**, then **Logs**, and select a new `agent_run` trace. On the
+root span, `input.attachments` should show a previewable PDF or image.
+
+![Root agent run showing a previewable customer-message attachment](assets/02-root-span-attachment-preview.png)
+
+## Answer key
+
+Compare your completed [`agent/agent.py`](02-log-attachments.solution/agent/agent.py)
+with this answer key.
