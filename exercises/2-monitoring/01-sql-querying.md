@@ -58,6 +58,8 @@ Northwind EU expansion
 
 Open a matching trace. Search is useful when you know the situation you want to investigate but did not record it as structured metadata.
 
+![Searching a trace for an opportunity ID in Braintrust Logs](assets/03-search-business-context.png)
+
 ## Step 4: Export one row per run with SQL
 
 Open the **SQL sandbox**. Start with this query:
