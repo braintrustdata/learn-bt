@@ -87,7 +87,10 @@ If your root input or output has a different shape, inspect one trace and adjust
 From the repository root, run:
 
 ~~~bash
-bt sql "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE is_root = true AND created >= NOW() - INTERVAL '7 days' ORDER BY metrics.estimated_cost DESC" --env-file .env
+bt sql --force-ignore-linter "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE is_root = TRUE AND created >= NOW() - INTERVAL 7 DAY ORDER BY metrics.estimated_cost DESC" --env-file .env
 ~~~
+
+The CLI reports a sort-planning warning for this query. The explicit flag runs
+the workshop query despite that warning.
 
 Compare the terminal result with your CSV. Both should show one row per agent run in the same cost order. The UI is useful for exploration. The CLI is useful in scripts and coding-agent workflows.
