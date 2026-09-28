@@ -1,103 +1,96 @@
-# 3.2 Create scorers
+# 3.2 Create a CRM-recipient scorer
 
-Add two scorers for the email-drafting dataset. One is a deterministic requirement. The other is a model judgment about whether the email did what the request asked.
+The regression dataset records why each source turn failed. The eval must judge
+the new run, however, rather than repeat that stored label. The drafted recipient
+and the CRM primary-contact email both exist in the new trace, so this behavior
+needs a deterministic scorer, not an LLM judge.
 
-The agent's final response is not the email object. Both scorers inspect the run trace, find the **draft_email** tool span, and grade that span's email output.
+A deterministic scorer applies a fixed comparison to structured tool output and
+does not ask another model for a judgment. You could build an equivalent check in
+Loop, but this exercise shows how to define and version the scorer in code for
+reuse in evals.
+
+The agent's final response is not the email object. The scorer must inspect the
+trace, find the **lookup_customer** and **draft_email** tool spans, then compare
+their structured outputs.
 
 Open **evals/scorers.py**.
 
-## Step 1: Write the deterministic recipient check
+## Step 1: Replace the scorer scaffold
 
-Replace the **valid_email** TODO with:
+Replace the entire file with:
 
 ~~~python
-async def valid_email(trace=None):
-    placeholder_domains = {"example.com", "example.org", "example.net"}
+import braintrust
+from pydantic import BaseModel
 
+project = braintrust.projects.create(name="learn-bt")
+
+
+class TraceParams(BaseModel):
+    trace: dict
+
+
+def crm_primary_contact_emails(tool_spans):
+    emails = set()
+    for span in tool_spans:
+        if (span.span_attributes or {}).get("name") != "lookup_customer":
+            continue
+
+        accounts = (span.output or {}).get("accounts", [])
+        for account in accounts:
+            contact = account.get("primary_contact") or {}
+            email = contact.get("email")
+            if email:
+                emails.add(email.strip().casefold())
+    return emails
+
+
+async def recipient_matches_crm(trace=None):
     if not trace:
         return None
 
     tool_spans = await trace.get_spans(span_type=["tool"])
     draft = next(
-        (s for s in tool_spans if (s.span_attributes or {}).get("name") == "draft_email"),
+        (
+            span
+            for span in tool_spans
+            if (span.span_attributes or {}).get("name") == "draft_email"
+        ),
         None,
     )
     if not draft:
-        return None
-
-    recipient = draft.output["email"].get("recipient", "")
-    if "@" not in recipient:
         return 0
 
-    return 0 if recipient.split("@")[-1].lower() in placeholder_domains else 1
-~~~
+    recipient = ((draft.output or {}).get("email") or {}).get("recipient", "")
+    expected_recipients = crm_primary_contact_emails(tool_spans)
+    if not recipient or not expected_recipients:
+        return 0
 
-This check is cheap and deterministic. It catches a hard requirement that does not need an LLM judge.
+    return int(recipient.strip().casefold() in expected_recipients)
 
-## Step 2: Write the email-goal judge
 
-Replace the prompt TODO with:
-
-~~~python
-scorer_prompt = """
-An account executive made this request:
-{{input.prompt}}
-
-The assistant drafted this email:
-Subject: {{output.subject}}
-Body: {{output.body}}
-
-Does the drafted email address the requested action? A request can have several
-parts. Grade only whether the email addresses the email-related part.
-
-Y: yes
-N: no
-"""
-~~~
-
-Then replace the **email_goal_reached** TODO with:
-
-~~~python
-async def email_goal_reached(input=None, trace=None):
-    if not trace:
-        return None
-
-    tool_spans = await trace.get_spans(span_type=["tool"])
-    draft = next(
-        (s for s in tool_spans if (s.span_attributes or {}).get("name") == "draft_email"),
-        None,
-    )
-    if not draft:
-        return None
-
-    return email_goal_reached_scorer(input=input, output=draft.output["email"])
-~~~
-
-A judge can assess whether the email addresses the account executive's intent, which is not a reliable format check.
-
-## Step 3: Register the scorers
-
-Replace the two registration TODOs with:
-
-~~~python
 project.scorers.create(
-    name="Valid email",
-    slug="valid-email",
+    name="Recipient matches CRM",
+    slug="recipient-matches-crm",
     parameters=TraceParams,
-    handler=valid_email,
-)
-
-project.scorers.create(
-    name="Email Goal Reached",
-    slug="email-goal-reached",
-    parameters=JudgeParams,
-    handler=email_goal_reached,
+    handler=recipient_matches_crm,
 )
 ~~~
 
-The Pydantic parameter models declare what data each scorer receives.
+The helper collects every verified primary-contact email returned by a customer
+lookup. The scorer returns 1 only when the draft recipient matches one of those
+addresses. It returns 0 when the agent did not draft an email, did not retrieve
+a usable CRM address, or drafted to a different address.
 
-## Step 4: Push and inspect
+This fail-closed behavior makes missing retrieval visible. If the agent does not
+look up the customer, it cannot prove that a recipient is correct.
+
+The source row's `expected` values are audit evidence for the original failure.
+This scorer does not read them. It measures the recipient the agent drafts on
+each new eval trace.
+
+## Step 2: Push and inspect the scorer
 
 Push from inside **evals**:
 
@@ -106,8 +99,15 @@ cd evals
 bt functions push scorers.py --env-file ../.env
 ~~~
 
-Open **learn-bt** in Braintrust. Confirm that **Valid email** and **Email Goal Reached** appear as project scorers. On later edits, run the same command with **--if-exists replace**.
+Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
+CRM** appears. Open it up and press "Run" on a sample trace.
 
-## Solution
+![A successful Recipient matches CRM scorer test](assets/02-recipient-matches-crm-scorer-test.png)
 
-See [02-creating-scorers.solution.md](02-creating-scorers.solution.md).
+On later edits, run the same command with **--if-exists
+replace**.
+
+## Answer key
+
+Compare your completed [evals/scorers.py](solutions/02-creating-scorers/evals/scorers.py)
+with this answer key.

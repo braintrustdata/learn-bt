@@ -14,12 +14,13 @@ them in order. Each later section builds on the state you left the agent in.
 | --- | --- | --- |
 | 0 | `0-foundations` | Get oriented in Braintrust and the CLI |
 | 1 | `1-instrumentation` | Add tracing to the agent |
-| 2 | `2-monitoring` | Query and analyze logs to find quality issues |
-| 3 | `3-evals` | Curate datasets, build scorers, run evals |
+| 2 | `2-active-observability` | Inspect production traffic with SQL, Loop, Topics, and Debugger |
+| 3 | `3-evals` | Turn a Loop finding into a regression dataset, baseline, and fix |
 | 4 | `4-human-review` | Custom views, human review, remote evals |
 
 Each exercise is a markdown file with a task, and occasionally a short bit of
-background. Most exercises have a `solution.md` complement that includes one way to solve the exercise. 
+background. Exercises that require source changes include a `solutions/` folder
+with the completed source files. UI-only exercises do not have an answer key.
 
 ## Prerequisites
 

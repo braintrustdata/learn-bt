@@ -7,8 +7,8 @@ Push with:
 
     bt functions push evals/parameters.py
 
-The reference implementation is in
-exercises/4-human-review/03-remote-eval-server.solution.md.
+The completed source is in
+exercises/4-human-review/solutions/03-remote-eval-server/evals/parameters.py.
 """
 
 import sys

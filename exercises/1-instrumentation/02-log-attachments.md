@@ -54,5 +54,5 @@ root span, `input.attachments` should show a previewable PDF or image.
 
 ## Answer key
 
-Compare your completed [`agent/agent.py`](02-log-attachments.solution/agent/agent.py)
+Compare your completed [`agent/agent.py`](solutions/02-log-attachments/agent/agent.py)
 with this answer key.

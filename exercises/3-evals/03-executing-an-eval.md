@@ -1,6 +1,19 @@
-# 3.3 Execute an eval
+# 3.3 Establish the recipient-mismatch baseline
 
-Run the Sales Assistant against the **email-drafting** dataset and score each run with the scorers from Exercise 3.2. The result is an experiment you can inspect and compare when you improve the agent.
+Run the current Sales Assistant against **crm-recipient-mismatches**. Every row
+was selected because the recorded run drafted to the wrong customer email. The
+deterministic scorer measures whether the current agent still makes that mistake
+when it receives the same turn input.
+
+Each dataset row preserves the original input, including its prompt and, when
+available, its conversation history and attachment. It deliberately excludes
+the original tool calls, draft, and final answer. The eval runs the current agent
+again, so LLM planning and output can vary slightly from the recorded trace.
+
+Expect a low score because every source run was a known mismatch, but do not
+expect exactly 0%. The goal is to record an honest baseline for CRM-recipient
+matching before you fix the recipient-selection code. The next exercise makes
+one code change and reruns this unchanged dataset.
 
 Open **evals/eval_agent.py**.
 
@@ -12,10 +25,10 @@ Below the path setup, add:
 from braintrust import Eval, init_dataset
 
 from agent.agent import InputFile, run_agent
-from scorers import email_goal_reached, valid_email
+from scorers import recipient_matches_crm
 
 PROJECT = "learn-bt"
-DATASET = "email-drafting"
+DATASET = "crm-recipient-mismatches"
 ~~~
 
 ## Step 2: Define the task
@@ -29,10 +42,17 @@ def task(input):
     if attachment is not None:
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
-    return run_agent(input["prompt"], attachments=attachments).output
+    return run_agent(
+        input["prompt"],
+        attachments=attachments,
+        history=input.get("history"),
+    ).output
 ~~~
 
-A dataset attachment is hydrated before the task runs. Converting it to **InputFile** exercises the same multimodal path as the production trace that created the row.
+A dataset attachment is hydrated before the task runs. The preserved
+`input.history` recreates the original conversation context when the failed turn
+was part of a multi-turn trace. The prior draft is not replayed. The agent must
+produce a new one.
 
 ## Step 3: Define the eval
 
@@ -41,29 +61,37 @@ Replace the commented-out **Eval** template with:
 ~~~python
 Eval(
     PROJECT,
-    experiment_name="email-drafting-eval",
+    experiment_name="recipient-mismatch-baseline",
     data=init_dataset(project=PROJECT, name=DATASET),
     task=task,
-    scores=[valid_email, email_goal_reached],  # type: ignore
+    scores=[recipient_matches_crm],  # type: ignore
 )
 ~~~
 
-## Step 4: Run and inspect it
+The scorer evaluates the new run trace. A score of 1 means the new draft
+recipient matches a primary-contact email returned in its own CRM lookup.
 
-From the repository root, run:
+## Step 4: Run the baseline
+
+From the repository root, run the full dataset:
 
 ~~~bash
 bt eval evals/eval_agent.py --env-file .env
 ~~~
 
-For a fast smoke test, run three rows:
+The full experiment should score low because this dataset holds only known
+recipient mismatches. A rerun can occasionally use the correct CRM address even
+before the fix. Record the observed score as the baseline that you will compare
+with the fixed version.
 
-~~~bash
-bt eval --first 3 evals/eval_agent.py --env-file .env
-~~~
+If a row passes, inspect its new trace. It means the current model did not
+reproduce that recorded failure on this attempt. Keep the row in the frozen
+regression dataset. A single passing rerun does not erase the source failure or
+count as the fix.
 
-Open the **email-drafting-eval** experiment in Braintrust. Inspect one row with each scorer, then follow its trace to **draft_email**. This verifies that the dataset, task, and trace-aware scorers are connected.
+![Recipient-mismatch baseline experiment results](assets/03-recipient-mismatch-baseline-experiment.png)
 
-## Solution
+## Answer key
 
-See [03-executing-an-eval.solution.md](03-executing-an-eval.solution.md).
+Compare your completed [evals/eval_agent.py](solutions/03-executing-an-eval/evals/eval_agent.py)
+with this answer key.

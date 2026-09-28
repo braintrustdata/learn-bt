@@ -1,84 +1,37 @@
-# 3.1 Curate a dataset
+# 3.1 Build a recipient-mismatch regression dataset
 
-Turn real agent traces into a focused dataset for one behavior: drafting customer emails. Create a dataset named **email-drafting**. You will use it in the next two exercises.
+In the previous module, Loop found customer email drafts whose recipient did not
+match the primary contact returned by the CRM. Turn every proven example into a
+dataset named **crm-recipient-mismatches**.
 
-## Step 1: Add a few traces by hand
+This is a focused regression dataset. It contains only known recipient failures,
+not a representative sample of all Sales Assistant traffic. You will first show
+that the current agent still fails these cases, then fix the implementation and
+rerun this exact dataset.
 
-Open **learn-bt**, then **Logs**. Filter to traces that contain the **draft_email** tool span:
+## Step 1: Create the failure dataset with Loop
 
-~~~sql
-any_span(span_attributes.name = 'draft_email')
-~~~
-
-Open several matching runs. For each good example, select the root span, choose **Add to dataset**, then create or select **email-drafting**.
-
-Choose examples that genuinely test email drafting. This is deliberate curation, not a random export of all traffic.
-
-## Step 2: Use Loop to expand coverage
-
-Open Loop from the Logs page and enter:
+Open **Loop** from **Logs** and enter:
 
 ~~~text
-Find more runs where the agent drafted a customer email. Add good, diverse
-examples to the email-drafting dataset.
+Create a dataset named crm-recipient-mismatches from the current Sales Assistant logs.
+
+Find every customer-facing agent_run that contains both lookup_customer and draft_email. Include a row only when the drafted email recipient differs from the primary_contact.email returned by lookup_customer in that same agent_run. Exclude internal-team and generic-mailbox drafts, user-supplied alternate recipients, ambiguous customer lookups, and runs without a usable lookup or draft.
+
+Create one row per failed agent_run. Preserve the original turn rather than rewriting it: store its exact request as input.prompt, its recorded history as input.history when present, and its attachment reference as input.attachment when present. Store the original CRM primary-contact email and the mismatched draft recipient in expected. Store the source trace ID, source agent_run span ID, category crm-recipient-mismatch, and label provenance trace-derived in metadata. Do not put the prior draft, tool result, or final response into input because the eval must generate those again.
+
+Link every source trace, report the number of rows created, and state any failures you excluded because the recorded input could not be replayed.
 ~~~
 
-Inspect a few rows that Loop adds. Hand curation gives you a high-confidence starting set. Loop can expand coverage without requiring inspection of every trace.
+![Recipient-mismatch regression dataset in Braintrust](assets/01-recipient-mismatch-dataset.png)
 
-## Step 3: Add the repeatable pipeline
+## Step 2: Inspect the regression cases
 
-Open **evals/dataset_pipeline.py**. Replace the commented-out template with:
+Open **Datasets**, then **crm-recipient-mismatches**. Confirm that it contains
+only recipient-mismatch failures. Each row must have `input.prompt`, and it must
+preserve conversation history and the source attachment when the original turn
+had them.
 
-~~~python
-from braintrust import DatasetPipeline
-
-
-async def transform(id=None, input=None, output=None, metadata=None, expected=None, trace=None):
-    spans = await trace.get_spans()
-
-    root = next(s for s in spans if s.is_root)
-    draft = next(
-        s for s in spans if (s.span_attributes or {}).get("name") == "draft_email"
-    )
-
-    row_input = {"prompt": root.input["prompt"]}
-    attachments = root.input.get("attachments")
-    if attachments:
-        row_input["attachment"] = attachments[0]
-
-    return {
-        "input": row_input,
-        "metadata": {"original_reference": draft.output["email"]},
-    }
-
-
-DatasetPipeline(
-    name="email-drafting-pipeline",
-    source={
-        "project_name": "learn-bt",
-        "filter": 'any_span(span_attributes.name = "draft_email")',
-        "scope": "trace",
-    },
-    transform=transform,
-    target={
-        "project_name": "learn-bt",
-        "dataset_name": "email-drafting",
-    },
-)
-~~~
-
-The filter selects whole traces that contain an email draft. The transform runs once per trace, keeps the original request compact, preserves a file reference when present, and saves the original email as review context.
-
-## Step 4: Run and inspect it
-
-From the repository root, run:
-
-~~~bash
-bt datasets pipeline run evals/dataset_pipeline.py --limit 20 --window 30d --env-file .env
-~~~
-
-Open **Datasets**, then **email-drafting**. Confirm that each row has **input.prompt**, optionally has **input.attachment**, and has the original email under **metadata.original_reference**.
-
-## Solution
-
-See [01-curating-datasets.solution.md](01-curating-datasets.solution.md).
+Open several rows and verify that `expected.crm_primary_contact_email` differs
+from `expected.source_draft_recipient`. Keep this dataset unchanged while you
+make the fix. The frozen inputs make the before-and-after experiments comparable.

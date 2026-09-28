@@ -246,6 +246,6 @@ In a trace confirm both of the following:
 
 Compare your completed source files with:
 
-- [`agent/agent.py`](01-instrument-tracing.solution/agent/agent.py)
-- [`agent/tools.py`](01-instrument-tracing.solution/agent/tools.py)
-- [`agent/fixtures.py`](01-instrument-tracing.solution/agent/fixtures.py)
+- [`agent/agent.py`](solutions/01-instrument-tracing/agent/agent.py)
+- [`agent/tools.py`](solutions/01-instrument-tracing/agent/tools.py)
+- [`agent/fixtures.py`](solutions/01-instrument-tracing/agent/fixtures.py)

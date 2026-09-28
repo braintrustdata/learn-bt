@@ -58,7 +58,7 @@ from braintrust import Eval, load_parameters
 
 from agent.agent import InputFile, run_agent
 from agent.config import AgentConfig
-from scorers import email_goal_reached, valid_email
+from scorers import recipient_matches_crm
 
 PROJECT = "learn-bt"
 saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
@@ -91,7 +91,7 @@ Eval(
     PROJECT,
     data=[],
     task=task,
-    scores=[valid_email, email_goal_reached],  # type: ignore
+    scores=[recipient_matches_crm],  # type: ignore
     parameters=saved_parameters,
 )
 ~~~
@@ -114,6 +114,9 @@ http://localhost:8300
 
 Test the connection and save the source. Open a Playground, select the remote eval source, choose a dataset, and run it. The agent runs locally while results and parameter changes remain visible in Braintrust.
 
-## Solution
+## Answer key
 
-See [03-remote-eval-server.solution.md](03-remote-eval-server.solution.md).
+Compare your completed source files with these answer keys:
+
+- [`evals/parameters.py`](solutions/03-remote-eval-server/evals/parameters.py)
+- [`evals/eval_agent_remote_server.py`](solutions/03-remote-eval-server/evals/eval_agent_remote_server.py)
