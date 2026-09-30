@@ -1,39 +1,38 @@
 # 4.1 Create a custom view [UI]
 
-Raw traces are useful for debugging, but reviewers often need a focused view of the decision they are making. Create a view for one reviewer and write that review back to the trace.
+Trace views contain the technical details developers need for debugging. Those
+details can make it harder for PMs and subject matter experts (SMEs) to inspect
+the part of a trace relevant to their review.
 
-## Step 1: Pick one reviewer and decision
+Custom views present trace data in a UI built for a specific workflow. In this
+exercise, you will create a view that makes a drafted email easy to inspect.
 
-Choose a specific persona. For example:
+## Step 1: Open a trace with a drafted email
 
-~~~text
-An account executive deciding whether a drafted customer email is ready to send.
-~~~
-
-The view should help that person make one decision. It does not need to show every field in the trace.
+Select a trace that contains a `draft_email` span, then open the **Views** tab.
+Starting from a representative trace gives Loop the data it needs to build and
+preview the view.
 
 ## Step 2: Ask Loop to create the view
 
-Open a representative trace and select the **Views** tab. Open Loop and enter:
+Enter into the prompt window:
 
 ~~~text
-Create a custom view for an account executive reviewing a drafted customer
-email. Show the original request, the relevant tool steps, and the final
-outcome. Add a thumbs-up or thumbs-down control and a comment field. Save each
-review to metadata.feedback on the root span so multiple reviewers can add
-feedback.
+Create a custom view for reviewing drafted customer emails. Show the original
+request and the output of the draft_email span as an email, with the email body, subject, and recipient. Only show this when there is an actual draft_email span in the trace. Provide a thumbs up/down feedback option that will can be used to provide feedback, which writes back to the draft_email span metadata.
 ~~~
 
-Review the proposed view before you save it. It should show the request, drafted email, and outcome without requiring the reviewer to navigate the raw span tree.
+Loop uses the current trace to identify the relevant fields and generate the
+view. Review the preview and refine the prompt if any email fields are missing.
 
-## Step 3: Test the write action
+## Step 3: Save and test the view
 
-Open a trace with the new view. Submit a thumbs-up or thumbs-down and a short comment. Then inspect the root span metadata.
+Save the view, then open another trace that contains a `draft_email` span and
+select the new view.
 
-You should find the review at:
+You should see the original request and drafted email in a focused layout,
+without navigating the raw span tree.
 
-~~~text
-metadata.feedback
-~~~
-
-If the write did not land on the root span, revise the view in Loop and test again. A useful custom view improves the path to a decision and reliably stores review evidence.
+You can edit a saved view to create a new version. When the view is ready for
+the broader review workflow, publish it so everyone with access to the project
+can use it.

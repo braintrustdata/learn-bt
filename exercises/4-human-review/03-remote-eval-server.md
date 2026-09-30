@@ -1,10 +1,20 @@
 # 4.3 Set up a remote eval server
 
-Expose the Sales Assistant configuration as saved parameters, then run the agent locally from a Braintrust Playground. This lets reviewers compare prompt, model, and turn-limit changes without editing code for every trial.
+A remote eval server lets domain experts tune an agent and run evals from a
+Braintrust playground without touching the code. Developers choose which parts
+of the agent configuration to expose as parameters, while the agent and scorer
+logic run in a controlled environment.
+
+Any configurable part of the agent can become a parameter, as long as it's a valid Pydantic schema. In this exercise,
+you will expose the Sales Assistant's prompt, model, and turn count. The same
+pattern can support tool settings, retrieval options, thresholds, or other
+configuration that can influence agent quality.
 
 ## Step 1: Create the saved parameters
 
-Open **evals/parameters.py**. Remove the unused **create_model** import. Replace the commented-out template with:
+Saved parameters define the controls that a reviewer can change from the
+playground. Open `evals/parameters.py`, remove the unused `create_model` import,
+and replace the commented-out template with:
 
 ~~~python
 project = braintrust.projects.create(name="learn-bt")
@@ -38,16 +48,18 @@ project.parameters.create(
 )
 ~~~
 
-The prompt parameter renders an editable prompt and model control. **MaxTurnsParam** exposes a separate runtime safety limit.
+The prompt parameter renders editable prompt and model controls.
+`MaxTurnsParam` exposes the runtime limit without exposing the rest of the agent
+configuration.
 
-Push from inside **evals**:
+Push from inside `evals`:
 
 ~~~bash
 cd evals
 bt functions push parameters.py --env-file ../.env
 ~~~
 
-In Braintrust, confirm that the prompt, model, and maximum-turn controls are editable.
+In Braintrust, confirm that the prompt, model, and maximum-turn controls are visible in the **Parameters** tab.
 
 ## Step 2: Write the remote eval task
 
@@ -96,7 +108,12 @@ Eval(
 )
 ~~~
 
-The Playground sends parameter values through **hooks.parameters**. The task converts those values to the app's **AgentConfig**, while the agent and scorers remain version-controlled locally.
+The playground sends parameter values through `hooks.parameters`. The task acts
+as an adapter: it converts those values to the app's `AgentConfig`, runs the
+agent, and returns its output. The agent and scorer logic remain versioned in
+the repository.
+
+Notice that data is left blank. That's because the dataset will be selected from the playground directly. Any additional scorers selected in the playground will run in addition to those defined here in the server code.
 
 ## Step 3: Start and register the server
 
@@ -106,13 +123,19 @@ From the repository root, run:
 bt eval evals/eval_agent_remote_server.py --dev --env-file .env
 ~~~
 
-Leave that command running. In Braintrust, open **Settings**, then **Remote Evals**. Register a source with:
+This command starts the eval server on your machine. Leave it running. In
+Braintrust, open **Settings**, then **Remote Evals**. Add a source with:
 
 ~~~text
 http://localhost:8300
 ~~~
 
-Test the connection and save the source. Open a Playground, select the remote eval source, choose a dataset, and run it. The agent runs locally while results and parameter changes remain visible in Braintrust.
+Test the connection and save the source. Open a playground, select the remote
+eval source, choose a dataset, and run it. If all is configured properly, you should see the eval results populate in the playground.
+
+Duplicate the remote eval task in the playground, change one of the parameters and run an eval again. Both experiments will execute side by side with the different parameter sets. How did that change affect quality?
+
+Congratulations! You just implemented a full flywheel for improving an agent's quality!
 
 ## Answer key
 
