@@ -1,4 +1,4 @@
-# 3.6 Fix recipient selection and rerun the regression dataset
+# 3.5 Fix recipient selection and rerun the regression dataset
 
 The baseline shows that some email drafts do not use the CRM primary-contact
 email. First, use Loop to inspect those failures and identify the cause. Then
@@ -19,7 +19,7 @@ its recommended code-level fix. You should find that the agent can give
 `draft_email` a plausible but guessed address instead of the CRM primary-contact
 email.
 
-![Loop diagnoses recipient-mismatch failures](assets/06-loop-diagnoses-recipient-mismatch.png)
+![Loop diagnoses recipient-mismatch failures](assets/05-loop-diagnoses-recipient-mismatch.png)
 
 Loop should identify that the model can send `draft_email` an email address it
 guessed before using the CRM lookup. Make the CRM account ID, rather than a
@@ -107,9 +107,9 @@ not address.
 The dataset stays frozen throughout this comparison. That is what lets you
 attribute a score change to the code change, rather than to different examples.
 
-![Recipient-mismatch baseline and account-ID experiments compared](assets/06-recipient-mismatch-account-id-comparison.png)
+![Recipient-mismatch baseline and account-ID experiments compared](assets/05-recipient-mismatch-account-id-comparison.png)
 
 ## Answer key
 
-Compare your completed [agent/tools.py](solutions/06-fix-recipient-selection/agent/tools.py)
+Compare your completed [agent/tools.py](solutions/05-fix-recipient-selection/agent/tools.py)
 with this answer key.
