@@ -1,4 +1,4 @@
-# 4.1 Create a custom view [UI]
+# 1.4 Create a custom view [UI]
 
 Trace views contain the technical details developers need for debugging. Those
 details can make it harder for PMs and subject matter experts (SMEs) to inspect

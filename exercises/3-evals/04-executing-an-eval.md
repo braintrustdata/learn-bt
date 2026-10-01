@@ -1,4 +1,4 @@
-# 3.3 Establish the recipient-mismatch baseline
+# 3.4 Establish the recipient-mismatch baseline
 
 Run the current Sales Assistant against **crm-recipient-mismatches**. Every row
 was selected because the recorded run drafted to the wrong customer email. The
@@ -12,7 +12,7 @@ again, so LLM planning and output can vary slightly from the recorded trace.
 
 Expect a low score because every source run was a known mismatch, but do not
 expect exactly 0%. The goal is to record an honest baseline for CRM-recipient
-matching before you fix the recipient-selection code. The next exercise makes
+matching before you fix the recipient-selection code. The fix exercise makes
 one code change and reruns this unchanged dataset.
 
 Open **evals/eval_agent.py**.
@@ -89,9 +89,9 @@ reproduce that recorded failure on this attempt. Keep the row in the frozen
 regression dataset. A single passing rerun does not erase the source failure or
 count as the fix.
 
-![Recipient-mismatch baseline experiment results](assets/03-recipient-mismatch-baseline-experiment.png)
+![Recipient-mismatch baseline experiment results](assets/04-recipient-mismatch-baseline-experiment.png)
 
 ## Answer key
 
-Compare your completed [evals/eval_agent.py](solutions/03-executing-an-eval/evals/eval_agent.py)
+Compare your completed [evals/eval_agent.py](solutions/04-executing-an-eval/evals/eval_agent.py)
 with this answer key.

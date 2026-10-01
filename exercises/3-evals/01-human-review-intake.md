@@ -1,4 +1,4 @@
-# 4.2 Create a human review scorer [UI]
+# 3.1 Create a human review intake form [UI]
 
 When we have codified our failure taxonomy and review process, we can create structured intake forms for human review so that SMEs can inspect and provide feedback on traces in a standardized way. In this exercise,
 you will add a human-review scorer to capture feedback on email quality, which will be written to the trace directly.

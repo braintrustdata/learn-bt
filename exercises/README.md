@@ -13,10 +13,9 @@ them in order. Each later section builds on the state you left the agent in.
 | Section | Folder | Theme |
 | --- | --- | --- |
 | 0 | `0-foundations` | Get oriented in Braintrust and the CLI |
-| 1 | `1-instrumentation` | Add tracing to the agent |
+| 1 | `1-instrumentation` | Add tracing and a custom view to the agent |
 | 2 | `2-active-observability` | Inspect production traffic with SQL, Loop, Topics, and Debugger |
-| 3 | `3-evals` | Turn a Loop finding into a regression dataset, baseline, and fix |
-| 4 | `4-human-review` | Custom views, human review, remote evals |
+| 3 | `3-evals` | Human review intake, regression datasets, scorers, evals, remote evals, and a fix |
 
 Each exercise is a markdown file with a task, and occasionally a short bit of
 background. Exercises that require source changes include a `solutions/` folder

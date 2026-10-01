@@ -1,4 +1,4 @@
-# 3.1 Build a recipient-mismatch regression dataset
+# 3.2 Build a recipient-mismatch regression dataset
 
 In the previous module, Loop found customer email drafts whose recipient did not
 match the primary contact returned by the CRM. Turn every proven example into a
@@ -23,7 +23,7 @@ Create one row per failed agent_run. Preserve the original turn rather than rewr
 Link every source trace, report the number of rows created, and state any failures you excluded because the recorded input could not be replayed.
 ~~~
 
-![Recipient-mismatch regression dataset in Braintrust](assets/01-recipient-mismatch-dataset.png)
+![Recipient-mismatch regression dataset in Braintrust](assets/02-recipient-mismatch-dataset.png)
 
 ## Step 2: Inspect the regression cases
 

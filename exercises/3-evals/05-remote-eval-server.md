@@ -1,4 +1,4 @@
-# 4.3 Set up a remote eval server
+# 3.5 Set up a remote eval server
 
 A remote eval server lets domain experts tune an agent and run evals from a
 Braintrust playground without touching the code. Developers choose which parts
@@ -141,5 +141,5 @@ Congratulations! You just implemented a full flywheel for improving an agent's q
 
 Compare your completed source files with these answer keys:
 
-- [`evals/parameters.py`](solutions/03-remote-eval-server/evals/parameters.py)
-- [`evals/eval_agent_remote_server.py`](solutions/03-remote-eval-server/evals/eval_agent_remote_server.py)
+- [`evals/parameters.py`](solutions/05-remote-eval-server/evals/parameters.py)
+- [`evals/eval_agent_remote_server.py`](solutions/05-remote-eval-server/evals/eval_agent_remote_server.py)

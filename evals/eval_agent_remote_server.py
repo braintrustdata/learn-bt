@@ -6,7 +6,7 @@ Load the saved parameters (parameters.py) and pass their values down through the
     bt eval evals/eval_remote_agent.py --dev
 
 The completed source is in
-exercises/4-human-review/solutions/03-remote-eval-server/evals/eval_agent_remote_server.py.
+exercises/3-evals/solutions/05-remote-eval-server/evals/eval_agent_remote_server.py.
 """
 
 import sys

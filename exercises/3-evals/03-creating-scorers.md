@@ -1,4 +1,4 @@
-# 3.2 Create a CRM-recipient scorer
+# 3.3 Create a CRM-recipient scorer
 
 The regression dataset records why each source turn failed. The eval must judge
 the new run, however, rather than repeat that stored label. The drafted recipient
@@ -102,12 +102,12 @@ bt functions push scorers.py --env-file ../.env
 Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
 CRM** appears. Open it up and press "Run" on a sample trace.
 
-![A successful Recipient matches CRM scorer test](assets/02-recipient-matches-crm-scorer-test.png)
+![A successful Recipient matches CRM scorer test](assets/03-recipient-matches-crm-scorer-test.png)
 
 On later edits, run the same command with **--if-exists
 replace**.
 
 ## Answer key
 
-Compare your completed [evals/scorers.py](solutions/02-creating-scorers/evals/scorers.py)
+Compare your completed [evals/scorers.py](solutions/03-creating-scorers/evals/scorers.py)
 with this answer key.

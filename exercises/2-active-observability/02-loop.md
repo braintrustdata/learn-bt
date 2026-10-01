@@ -4,7 +4,7 @@ Active observability applies AI to the traces you already collect. Start with a
 question in Loop, turn a supported recurring behavior into a Pattern, then
 inspect the Pattern's evidence in the trace itself.
 
-## 1.1 Use Loop to query something
+## Step 1 Use Loop to query something
 
 Open **learn-bt**, then select **Loop** in the project sidebar. Start a new
 thread and ask:
@@ -17,7 +17,7 @@ Loop investigates the project and returns an evidence-backed response.
 
 ![Loop groups findings from Sales Assistant logs into reported Patterns.](assets/02-loop-investigation-and-reported-patterns.png)
 
-## 1.2 Read a Pattern
+## Step 2 Read a Pattern
 
 When Loop identifies a recurring behavior, it reports a Pattern. A Pattern is a
 saved report, not a single trace. It summarizes the behavior, explains why it
@@ -36,7 +36,7 @@ traces.
 
 ![A Pattern report summarizes the behavior, suggests a fix, and links supporting traces.](assets/02-pattern-report.png)
 
-## 1.3 Inspect the evidence trace
+## Step 3 Inspect the evidence trace
 
 The Pattern report links to its evidence traces. Open one in the side panel and
 start with the `conversation` root, then select the relevant `agent_run`
