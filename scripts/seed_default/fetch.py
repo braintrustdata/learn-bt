@@ -4,7 +4,7 @@ Maintainer tool, not part of the workshop.
 
 Usage:
     uv run python -m scripts.seed_default.fetch --source-project my-project
-    uv run python -m scripts.seed_default.fetch --source-project my-project --traces 50
+    uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
 
 Requires BRAINTRUST_API_KEY with read access to the source project.
 """
@@ -16,6 +16,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -33,11 +34,12 @@ from .snapshot import (
 
 load_dotenv()
 
-DEFAULT_TRACES = 100
+DEFAULT_TRACES = 300
 
 # BTQL caps a single query at 1000 rows, so traces are fetched a chunk at a time.
 BTQL_MAX_LIMIT = 1000
 TRACES_PER_QUERY = 25
+ATTACHMENT_DOWNLOAD_ATTEMPTS = 3
 
 # Automation output (Patterns, online scorers) points at rules that live in the
 # source project, so it would dangle in a replayed copy.
@@ -78,12 +80,14 @@ def _btql(session: requests.Session, query: str) -> list[dict[str, Any]]:
     return response.json()["data"]
 
 
-def _fetch_spans(session: requests.Session, project_id: str, traces: int) -> list[dict[str, Any]]:
+def _fetch_spans(
+    session: requests.Session, project_id: str, traces: int, root_name: str
+) -> list[dict[str, Any]]:
     """Fetch every span belonging to the ``traces`` most recent traces."""
     roots = _btql(
         session,
         f"select: root_span_id from: project_logs('{project_id}') "
-        f"filter: is_root sort: created desc limit: {traces}",
+        f"filter: is_root and name = '{root_name}' sort: created desc limit: {traces}",
     )
     root_span_ids = [row["root_span_id"] for row in roots]
 
@@ -139,6 +143,17 @@ def _extension(filename: str, content_type: str) -> str:
     return suffix or mimetypes.guess_extension(content_type) or ".bin"
 
 
+def _download_attachment(download_url: str) -> requests.Response:
+    """Download an attachment, retrying transient storage errors."""
+    for attempt in range(ATTACHMENT_DOWNLOAD_ATTEMPTS):
+        response = requests.get(download_url)
+        if response.status_code < 500 or attempt == ATTACHMENT_DOWNLOAD_ATTEMPTS - 1:
+            response.raise_for_status()
+            return response
+        time.sleep(2 ** attempt)
+    raise AssertionError("Attachment download retry loop did not return a response.")
+
+
 def _download_attachments(
     session: requests.Session, org_id: str, spans: list[dict[str, Any]], directory: Path
 ) -> dict[str, str]:
@@ -175,8 +190,7 @@ def _download_attachments(
         metadata.raise_for_status()
         download_url = metadata.json()["downloadUrl"]
 
-        contents = requests.get(download_url)
-        contents.raise_for_status()
+        contents = _download_attachment(download_url)
 
         digest = hashlib.sha256(contents.content).hexdigest()[:16]
         (directory / f"{digest}{_extension(filename, content_type)}").write_bytes(contents.content)
@@ -192,6 +206,8 @@ def main() -> None:
                         help="Project to record traces from.")
     parser.add_argument("--traces", type=int, default=DEFAULT_TRACES,
                         help="Number of most recent traces to record.")
+    parser.add_argument("--root-name", default="chat_turn",
+                        help="Name of the root span to record.")
     parser.add_argument("--out", type=Path, default=SNAPSHOT_DIR,
                         help="Directory to write the snapshot into.")
     args = parser.parse_args()
@@ -200,7 +216,7 @@ def main() -> None:
     project_id, org_id = _resolve_project(session, args.source_project)
 
     print(f"Fetching the {args.traces} most recent traces from {args.source_project}...")
-    spans = [cleaned for span in _fetch_spans(session, project_id, args.traces)
+    spans = [cleaned for span in _fetch_spans(session, project_id, args.traces, args.root_name)
              if (cleaned := _clean(span))]
     traces = sum(1 for span in spans if not span.get("span_parents"))
     print(f"Fetched {len(spans)} spans across {traces} traces.")

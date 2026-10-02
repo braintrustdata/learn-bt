@@ -5,8 +5,8 @@ Load the saved parameters (parameters.py) and pass their values down through the
 
     bt eval evals/eval_remote_agent.py --dev
 
-The reference implementation is in
-exercises/4-human-review/03-remote-eval-server.solution.md.
+The completed source is in
+exercises/3-evals/solutions/06-remote-eval-server/evals/eval_agent_remote_server.py.
 """
 
 import sys
@@ -24,6 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 #     PROJECT,
 #     data=[],
 #     task=task,
-#     scores=[valid_email, email_goal_reached], #type: ignore
+#     scores=[recipient_matches_crm], #type: ignore
 #     parameters=saved_parameters,
 # )

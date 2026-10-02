@@ -3,7 +3,7 @@
 For each request the script randomly picks a fixture object (an account or an
 opportunity), asks an LLM to write the single request an
 account executive might type about it, then runs the agent on that request. Once
-you have instrumented the agent with Braintrust tracing (section 2), running this
+you have instrumented the agent with Braintrust tracing (section 1), running this
 populates your project's logs with varied traces you can query, cluster, and
 analyze in later sections.
 
@@ -11,10 +11,16 @@ Some requests arrive with an attachment: the LLM also drafts a short "customer
 message", which the script renders as either a text PDF or a PNG and passes to
 the agent as input, so you have traces that exercise attachment logging.
 
+With --conversation-turns, each generated request becomes the first turn in a
+conversation. The script then sends follow-up requests, passing the messages so
+far as history. Each customer turn is its own trace, and the turns of one
+conversation share a session ID.
+
 Usage:
     uv run python -m scripts.seed --count 20
     uv run python -m scripts.seed --count 20 --attachment-ratio 0.3
     uv run python -m scripts.seed --count 20 --concurrency 4
+    uv run python -m scripts.seed --count 3 --conversation-turns 2
 
 Requires BRAINTRUST_API_KEY (a .env file is loaded if present). All model calls
 route through the Braintrust gateway, so no provider-specific key is needed.
@@ -27,6 +33,7 @@ import json
 import os
 import random
 import textwrap
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -37,7 +44,7 @@ from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-from agent.agent import run_agent
+from agent.agent import Agent
 from agent.fixtures import ACCOUNTS, OPPORTUNITIES
 
 load_dotenv()
@@ -75,6 +82,11 @@ Return a JSON object with:
   that attachment here. This attachment will be a customer message. Make it relevant 
   to the prompt context; otherwise null.
 """
+
+FOLLOW_UP_PROMPTS = [
+    "Thanks. Please draft a concise follow-up email to the CRM primary contact.",
+    "What is the most important next step? Update the CRM if a change is needed.",
+]
 
 
 def _generate_request(
@@ -152,7 +164,7 @@ def _seed_one(
     client: OpenAI, args: argparse.Namespace, fixture_kind: str, fixture: dict,
     with_attachment: bool, i: int, total: int,
 ) -> None:
-    """Generate a single request and run the agent on it."""
+    """Generate one request or a multi-turn conversation and run the agent."""
     try:
         req = _generate_request(client, args.model, fixture_kind, fixture, with_attachment)
     except Exception as exc:  # keep seeding even if generation fails
@@ -164,27 +176,65 @@ def _seed_one(
     if with_attachment and req.get("attachment_text"):
         attachments = [render_attachment(req["attachment_text"], i)]
 
-    label = "with attachment" if attachments else "text only"
-    print(f"[{i}/{total}] ({fixture_kind}, {label}) {prompt}")
+    turn_prompts = [
+        prompt,
+        *(FOLLOW_UP_PROMPTS[index % len(FOLLOW_UP_PROMPTS)]
+          for index in range(args.conversation_turns - 1)),
+    ]
+    attachments_by_turn = [attachments, *([None] * (args.conversation_turns - 1))]
+
+    for turn_index, (turn_prompt, turn_attachments) in enumerate(
+        zip(turn_prompts, attachments_by_turn, strict=True)
+    ):
+        label = "with attachment" if turn_attachments else "text only"
+        print(
+            f"[{i}/{total}] turn {turn_index + 1}/{args.conversation_turns} "
+            f"({fixture_kind}, {label}) {turn_prompt}"
+        )
     try:
-        run_agent(prompt, attachments=attachments)
+        agent = Agent()
+        history = None
+        session_id = uuid.uuid4().hex
+        for turn_prompt, turn_attachments in zip(
+            turn_prompts, attachments_by_turn, strict=True
+        ):
+            result = agent.chat_turn(
+                turn_prompt,
+                session_id=session_id,
+                attachments=turn_attachments,
+                history=history,
+            )
+            history = [*(history or []), *result.new_messages]
     except Exception as exc:  # keep seeding even if one run fails
         print(f"    run failed: {exc}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed the Sales Assistant with traffic.")
-    parser.add_argument("--count", type=int, default=10, help="Number of traces to seed.")
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=10,
+        help="Number of requests, or conversations when --conversation-turns is greater than 1.",
+    )
     parser.add_argument("--attachment-ratio", type=float, default=0.2,
                         help="Fraction of requests that include an attachment (0-1).")
     parser.add_argument("--model", default="gpt-4o-mini", help="Model used to generate requests.")
     parser.add_argument("--seed", type=int, default=None, help="Optional RNG seed for reproducibility.")
     parser.add_argument("--concurrency", type=int, default=1,
                         help="Number of requests to generate and run concurrently.")
+    parser.add_argument(
+        "--conversation-turns",
+        type=int,
+        default=1,
+        help="Customer turns per seeded conversation.",
+    )
     args = parser.parse_args()
 
     if args.concurrency < 1:
         parser.error("--concurrency must be at least 1")
+    if args.conversation_turns < 1:
+        parser.error("--conversation-turns must be at least 1")
 
     rng = random.Random(args.seed)
 
@@ -196,6 +246,7 @@ def main() -> None:
         client = OpenAI(
             base_url=os.environ["BASE_URL"],
             api_key=os.environ["BRAINTRUST_API_KEY"],
+            default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
         )
 
     # Draw all random choices up front on the single RNG so that a given --seed
@@ -208,8 +259,12 @@ def main() -> None:
         with_attachment = rng.random() < args.attachment_ratio
         jobs.append((fixture_kind, fixture, with_attachment, i))
 
-    print(f"Generating and running {args.count} requests "
-          f"({args.concurrency} at a time)...")
+    workload = "requests" if args.conversation_turns == 1 else "conversations"
+    print(
+        f"Generating and running {args.count} {workload} "
+        f"with {args.conversation_turns} turn(s) each "
+        f"({args.concurrency} at a time)..."
+    )
     if args.concurrency == 1:
         for fixture_kind, fixture, with_attachment, i in jobs:
             _seed_one(client, args, fixture_kind, fixture, with_attachment, i, args.count)
