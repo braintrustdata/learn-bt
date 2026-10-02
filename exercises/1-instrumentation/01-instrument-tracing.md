@@ -183,16 +183,15 @@ def search_docs(...):
 For now, let the decorator capture each helper's normal input and output. You
 will take control of `search_docs()` data in the next step.
 
-Run three two-turn conversations. `--conversation-turns` is the number of
-customer messages in one conversation, which is separate from
-`config.max_tool_calls`, the number of tool calls the agent may make to answer
-one message:
+Run three conversations. The seed script gives each one a random number of
+customer turns, from one to three:
 
 ```bash
-uv run python -m scripts.seed --count 3 --conversation-turns 2
+uv run python -m scripts.seed --count 3
 ```
 
-This creates six `chat_turn` traces, two for each conversation. In **Logs**,
+This creates between three and nine `chat_turn` traces, one for each customer
+turn. In **Logs**,
 open one of them. It should have a `chat_turn` task root, with LLM, tool, and
 fixture spans nested underneath.
 
@@ -283,16 +282,16 @@ writing entire knowledge-base documents to the trace.
 Run the final seed command:
 
 ```bash
-uv run python -m scripts.seed --count 5 --conversation-turns 2 --attachment-ratio 1.0
+uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
 ```
 
 In a trace confirm each of the following:
 
-1. The root `chat_turn` span has `metadata.has_attachments`. It is `true` for turns with an attachment and `false` otherwise. It also has `metadata.session_id`, which is the same for both turns of a conversation, and `metadata.turn_number`, which is 1 for the first turn and 2 for the second.
+1. The root `chat_turn` span has `metadata.has_attachments`. It is `true` for turns with an attachment and `false` otherwise. It also has `metadata.session_id`, which is the same for every turn of a conversation, and `metadata.turn_number`, which counts up from 1 within a conversation.
 
 2. The `chat_turn` input has `prompt` and `history`. The output has only
    `output`, with no `new_messages`. For the first turn of a conversation
-   `history` is empty. For the second turn it holds the first turn's messages.
+   `history` is empty. For later turns it holds the earlier turns' messages.
 
 3. For one of the  `search_docs` child spans beneath, you should see:
 

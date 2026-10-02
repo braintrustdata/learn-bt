@@ -11,9 +11,9 @@ Only `BRAINTRUST_API_KEY` is needed. The project is created if it does not exist
 
 ## What is preserved, and what is not
 
-The snapshot holds 300 `chat_turn` traces, from 150 two-turn conversations.
-Each customer turn is its own trace, and the second turn of a conversation
-carries the first turn's messages in `input.history`, so replayed traces have
+The snapshot holds about 300 `chat_turn` traces, from 150 conversations of one to
+three turns. Each customer turn is its own trace, and later turns of a
+conversation carry the earlier turns' messages in `input.history`, so replayed traces have
 the same structure as freshly seeded ones.
 
 Two things, though, are rewritten:
@@ -38,6 +38,6 @@ changes enough that the recorded traces no longer look like what attendees
 would produce. It records the most recent 300 `chat_turn` roots by default.
 
 ```bash
-uv run python -m scripts.seed --count 150 --conversation-turns 2 --concurrency 10
+uv run python -m scripts.seed --count 150 --concurrency 10
 uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
 ```

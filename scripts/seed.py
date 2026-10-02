@@ -11,16 +11,15 @@ Some requests arrive with an attachment: the LLM also drafts a short "customer
 message", which the script renders as either a text PDF or a PNG and passes to
 the agent as input, so you have traces that exercise attachment logging.
 
-With --conversation-turns, each generated request becomes the first turn in a
-conversation. The script then sends follow-up requests, passing the messages so
-far as history. Each customer turn is its own trace, and the turns of one
-conversation share a session ID.
+Each generated request is the first turn of a conversation of one to three
+customer turns. Later turns are follow-ups picked from a fixed list, sent with the
+messages so far as history. Each customer turn is its own trace, and the turns of
+one conversation share a session ID.
 
 Usage:
     uv run python -m scripts.seed --count 20
     uv run python -m scripts.seed --count 20 --attachment-ratio 0.3
     uv run python -m scripts.seed --count 20 --concurrency 4
-    uv run python -m scripts.seed --count 3 --conversation-turns 2
 
 Requires BRAINTRUST_API_KEY (a .env file is loaded if present). All model calls
 route through the Braintrust gateway, so no provider-specific key is needed.
@@ -86,6 +85,14 @@ Return a JSON object with:
 FOLLOW_UP_PROMPTS = [
     "Thanks. Please draft a concise follow-up email to the CRM primary contact.",
     "What is the most important next step? Update the CRM if a change is needed.",
+    "Summarize the key risks on this account in a few bullets.",
+    "Search the knowledge base for anything relevant to what the customer asked and tell me what you find.",
+    "Who is the primary contact, and what is their email address?",
+    "Draft a short internal note for my manager on where we stand.",
+    "Double check the opportunity stage and close date for me.",
+    "What should I prepare before my next call with them?",
+    "Add a CRM note summarizing this conversation.",
+    "Please shorten your last answer to two sentences.",
 ]
 
 
@@ -162,7 +169,7 @@ def render_attachment(text: str, index: int) -> Path:
 
 def _seed_one(
     client: OpenAI, args: argparse.Namespace, fixture_kind: str, fixture: dict,
-    with_attachment: bool, i: int, total: int,
+    with_attachment: bool, follow_ups: list[str], i: int, total: int,
 ) -> None:
     """Generate one request or a multi-turn conversation and run the agent."""
     try:
@@ -176,19 +183,15 @@ def _seed_one(
     if with_attachment and req.get("attachment_text"):
         attachments = [render_attachment(req["attachment_text"], i)]
 
-    turn_prompts = [
-        prompt,
-        *(FOLLOW_UP_PROMPTS[index % len(FOLLOW_UP_PROMPTS)]
-          for index in range(args.conversation_turns - 1)),
-    ]
-    attachments_by_turn = [attachments, *([None] * (args.conversation_turns - 1))]
+    turn_prompts = [prompt, *follow_ups]
+    attachments_by_turn = [attachments, *([None] * len(follow_ups))]
 
     for turn_index, (turn_prompt, turn_attachments) in enumerate(
         zip(turn_prompts, attachments_by_turn, strict=True)
     ):
         label = "with attachment" if turn_attachments else "text only"
         print(
-            f"[{i}/{total}] turn {turn_index + 1}/{args.conversation_turns} "
+            f"[{i}/{total}] turn {turn_index + 1}/{len(turn_prompts)} "
             f"({fixture_kind}, {label}) {turn_prompt}"
         )
     try:
@@ -215,28 +218,17 @@ def main() -> None:
         "--count",
         type=int,
         default=10,
-        help="Number of requests, or conversations when --conversation-turns is greater than 1.",
+        help="Number of conversations, each of one to three customer turns.",
     )
     parser.add_argument("--attachment-ratio", type=float, default=0.2,
                         help="Fraction of requests that include an attachment (0-1).")
     parser.add_argument("--model", default="gpt-4o-mini", help="Model used to generate requests.")
-    parser.add_argument("--seed", type=int, default=None, help="Optional RNG seed for reproducibility.")
     parser.add_argument("--concurrency", type=int, default=1,
                         help="Number of requests to generate and run concurrently.")
-    parser.add_argument(
-        "--conversation-turns",
-        type=int,
-        default=1,
-        help="Customer turns per seeded conversation.",
-    )
     args = parser.parse_args()
 
     if args.concurrency < 1:
         parser.error("--concurrency must be at least 1")
-    if args.conversation_turns < 1:
-        parser.error("--conversation-turns must be at least 1")
-
-    rng = random.Random(args.seed)
 
     if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
         client = OpenAI(
@@ -249,32 +241,31 @@ def main() -> None:
             default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
         )
 
-    # Draw all random choices up front on the single RNG so that a given --seed
-    # produces the same workload regardless of --concurrency.
+    # Choose every conversation up front, then run them.
     jobs = []
     for i in range(1, args.count + 1):
-        fixture_kind = rng.choice(list(FIXTURE_KINDS))
+        fixture_kind = random.choice(list(FIXTURE_KINDS))
         fixtures = FIXTURE_KINDS[fixture_kind][0]
-        fixture = rng.choice(list(fixtures.values()))
-        with_attachment = rng.random() < args.attachment_ratio
-        jobs.append((fixture_kind, fixture, with_attachment, i))
+        fixture = random.choice(list(fixtures.values()))
+        with_attachment = random.random() < args.attachment_ratio
+        follow_ups = random.sample(FOLLOW_UP_PROMPTS, random.randint(0, 2))
+        jobs.append((fixture_kind, fixture, with_attachment, follow_ups, i))
 
-    workload = "requests" if args.conversation_turns == 1 else "conversations"
     print(
-        f"Generating and running {args.count} {workload} "
-        f"with {args.conversation_turns} turn(s) each "
-        f"({args.concurrency} at a time)..."
+        f"Generating and running {args.count} conversations "
+        f"of 1 to 3 turns each ({args.concurrency} at a time)..."
     )
     if args.concurrency == 1:
-        for fixture_kind, fixture, with_attachment, i in jobs:
-            _seed_one(client, args, fixture_kind, fixture, with_attachment, i, args.count)
+        for fixture_kind, fixture, with_attachment, follow_ups, i in jobs:
+            _seed_one(client, args, fixture_kind, fixture, with_attachment, follow_ups, i, args.count)
     else:
         with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
             futures = [
                 executor.submit(
-                    _seed_one, client, args, fixture_kind, fixture, with_attachment, i, args.count
+                    _seed_one, client, args, fixture_kind, fixture, with_attachment, follow_ups, i,
+                    args.count,
                 )
-                for fixture_kind, fixture, with_attachment, i in jobs
+                for fixture_kind, fixture, with_attachment, follow_ups, i in jobs
             ]
             for future in as_completed(futures):
                 future.result()

@@ -9,13 +9,13 @@ From the repository root, use either option.
 **Option 1: Generate new traffic**
 
 ~~~bash
-uv run python -m scripts.seed --count 150 --conversation-turns 2 --attachment-ratio 0.2 --concurrency 10
+uv run python -m scripts.seed --count 150 --attachment-ratio 0.2 --concurrency 10
 ~~~
 
-This creates up to 150 synthetic, two-turn customer conversations in your
-`learn-bt` project. Each customer turn is its own `chat_turn` trace, so a
-conversation produces two traces. The second turn's `input.history` holds the
-first turn's messages. About 20% of the conversations include an attachment,
+This creates up to 150 synthetic customer conversations of one to three turns
+in your `learn-bt` project. Each customer turn is its own `chat_turn` trace, and
+the turns of a conversation share a `metadata.session_id`. A later turn's
+`input.history` holds the messages from the earlier turns. About 20% of the conversations include an attachment,
 and up to 10 conversations run at once.
 
 This option makes model calls. `scripts.seed` uses `gpt-4o-mini` to generate
@@ -29,13 +29,13 @@ one Sales Assistant model call.
 uv run --env-file .env python -m scripts.seed_default --project learn-bt
 ~~~
 
-This option does not call a model provider. It replays 300 recorded `chat_turn`
-traces, from 150 two-turn conversations, in `scripts/seed_default/snapshot/`. It uploads their attachments
+This option does not call a model provider. It replays about 300 recorded `chat_turn`
+traces, from 150 conversations of one to three turns, in `scripts/seed_default/snapshot/`. It uploads their attachments
 to your Braintrust org, gives the spans current timestamps, and inserts them
 into the `learn-bt` project. It still makes Braintrust API calls, but it does
 not generate new requests or agent responses.
 
-Each replay adds a new batch of 300 traces; it does not replace the traffic
+Each replay adds a new batch of about 300 traces; it does not replace the traffic
 already in the project. Run it once for this exercise. If you need to restart,
 clear the existing project logs before replaying the snapshot again.
 
