@@ -21,9 +21,9 @@ record, are mocked, so running the agent never touches a real system.
 
 ```
 agent/
-  agent.py      The agent loop and primary entry point for invoking the agent.
-  config.py     Runtime config: model, sampling params, prompt, turn limit.
-  tools.py      The tools and their schemas (read tools query fixtures; write tools are mocked).
+  agent.py      The demo agent
+  config.py     The agent's runtime config
+  tools.py      The tools and their schemas
   fixtures.py   Static seed data the read tools look up.
 main.py         A REPL for chatting with the agent.
 exercises/      The workshop exercises, grouped by section.

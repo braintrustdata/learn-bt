@@ -13,9 +13,10 @@ uv run python -m scripts.seed --count 150 --conversation-turns 2 --attachment-ra
 ~~~
 
 This creates up to 150 synthetic, two-turn customer conversations in your
-`learn-bt` project. Each conversation is one `conversation` root trace with
-two nested `agent_run` spans, one for each customer turn. About 20% of the
-conversations include an attachment, and up to 10 conversations run at once.
+`learn-bt` project. Each customer turn is its own `chat_turn` trace, so a
+conversation produces two traces. The second turn's `input.history` holds the
+first turn's messages. About 20% of the conversations include an attachment,
+and up to 10 conversations run at once.
 
 This option makes model calls. `scripts.seed` uses `gpt-4o-mini` to generate
 each synthetic account-executive request. The Sales Assistant also uses
@@ -28,13 +29,13 @@ one Sales Assistant model call.
 uv run --env-file .env python -m scripts.seed_default --project learn-bt
 ~~~
 
-This option does not call a model provider. It replays 150 recorded two-turn
-conversations from `scripts/seed_default/snapshot/`, uploads their attachments
+This option does not call a model provider. It replays 300 recorded `chat_turn`
+traces, from 150 two-turn conversations, in `scripts/seed_default/snapshot/`. It uploads their attachments
 to your Braintrust org, gives the spans current timestamps, and inserts them
 into the `learn-bt` project. It still makes Braintrust API calls, but it does
 not generate new requests or agent responses.
 
-Each replay adds a new batch of 150 traces; it does not replace the traffic
+Each replay adds a new batch of 300 traces; it does not replace the traffic
 already in the project. Run it once for this exercise. If you need to restart,
 clear the existing project logs before replaying the snapshot again.
 
@@ -50,7 +51,7 @@ Open **learn-bt**, then select **Logs**. Add this filter:
 metadata.has_attachments = true
 ~~~
 
-Open a result, then select the `agent_run` span for the first customer turn.
+Open a result, which is the `chat_turn` trace for one customer turn.
 Its input contains the attachment from Exercise 1.2. The `has_attachments`
 field lives on that turn, so you can find attachment-bearing work without
 opening every LLM span.
@@ -71,8 +72,7 @@ Or:
 Northwind EU expansion
 ~~~
 
-Open a matching conversation trace, then select the `agent_run` child that
-contains the request. Search is useful when you know the situation you want to
+Open a matching `chat_turn` trace and read the request in its input. Search is useful when you know the situation you want to
 investigate but did not record it as structured metadata.
 
 ![Searching a multi-turn trace for an opportunity ID in Braintrust Logs](assets/03-search-business-context.png)
@@ -89,16 +89,16 @@ SELECT
   metrics.tokens AS tokens,
   metrics.estimated_cost AS estimated_cost
 FROM project_logs('learn-bt')
-WHERE name = 'agent_run'
+WHERE name = 'chat_turn'
   AND created >= NOW() - INTERVAL 7 DAY
 ORDER BY estimated_cost DESC
 ~~~
 
-Run it, then select **Download** to export a CSV. Each `agent_run` span holds
-one customer turn's request and response. The `conversation` root holds the
-whole interaction, so it is not the row you want for this export.
+Run it, then select **Download** to export a CSV. Each `chat_turn` trace holds
+one customer turn's request and response, so a row per trace is a row per
+customer turn.
 
-If your input or output has a different shape, inspect one `agent_run` span and
+If your input or output has a different shape, inspect one `chat_turn` span and
 adjust the fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.
 
 ![SQL sandbox query exporting one row per customer turn](assets/04-export-root-runs-sql.png)
@@ -108,7 +108,7 @@ adjust the fields. The [SQL reference](https://www.braintrust.dev/docs/reference
 From the repository root, run:
 
 ~~~bash
-bt sql --force-ignore-linter "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE name = 'agent_run' AND created >= NOW() - INTERVAL 7 DAY ORDER BY estimated_cost DESC" --env-file .env
+bt sql --force-ignore-linter "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE name = 'chat_turn' AND created >= NOW() - INTERVAL 7 DAY ORDER BY estimated_cost DESC" --env-file .env
 ~~~
 
 The CLI reports a sort-planning warning for this query. The explicit flag runs

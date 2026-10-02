@@ -11,9 +11,10 @@ Only `BRAINTRUST_API_KEY` is needed. The project is created if it does not exist
 
 ## What is preserved, and what is not
 
-The snapshot holds 150 two-turn conversation traces. Each trace has a
-`conversation` root and two nested `agent_run` spans, so a replayed trace has
-the same structure as a freshly seeded multi-turn conversation.
+The snapshot holds 300 `chat_turn` traces, from 150 two-turn conversations.
+Each customer turn is its own trace, and the second turn of a conversation
+carries the first turn's messages in `input.history`, so replayed traces have
+the same structure as freshly seeded ones.
 
 Two things, though, are rewritten:
 
@@ -34,9 +35,9 @@ snapshot.
 
 `fetch.py` rebuilds `snapshot/` from a live project. Run it when the agent
 changes enough that the recorded traces no longer look like what attendees
-would produce. It records the most recent 150 `conversation` roots by default.
+would produce. It records the most recent 300 `chat_turn` roots by default.
 
 ```bash
 uv run python -m scripts.seed --count 150 --conversation-turns 2 --concurrency 10
-uv run python -m scripts.seed_default.fetch --source-project my-project --traces 150
+uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
 ```

@@ -4,7 +4,7 @@ Maintainer tool, not part of the workshop.
 
 Usage:
     uv run python -m scripts.seed_default.fetch --source-project my-project
-    uv run python -m scripts.seed_default.fetch --source-project my-project --traces 150
+    uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
 
 Requires BRAINTRUST_API_KEY with read access to the source project.
 """
@@ -34,7 +34,7 @@ from .snapshot import (
 
 load_dotenv()
 
-DEFAULT_TRACES = 150
+DEFAULT_TRACES = 300
 
 # BTQL caps a single query at 1000 rows, so traces are fetched a chunk at a time.
 BTQL_MAX_LIMIT = 1000
@@ -206,7 +206,7 @@ def main() -> None:
                         help="Project to record traces from.")
     parser.add_argument("--traces", type=int, default=DEFAULT_TRACES,
                         help="Number of most recent traces to record.")
-    parser.add_argument("--root-name", default="conversation",
+    parser.add_argument("--root-name", default="chat_turn",
                         help="Name of the root span to record.")
     parser.add_argument("--out", type=Path, default=SNAPSHOT_DIR,
                         help="Directory to write the snapshot into.")

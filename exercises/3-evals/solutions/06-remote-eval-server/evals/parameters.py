@@ -13,10 +13,10 @@ from agent.config import DEFAULT_CONFIG
 project = braintrust.projects.create(name="learn-bt")
 
 
-class MaxTurnsParam(BaseModel):
+class MaxToolCallsParam(BaseModel):
     value: int = Field(
-        default=DEFAULT_CONFIG.max_turns,
-        description="The most model calls a single agent run may make.",
+        default=DEFAULT_CONFIG.max_tool_calls,
+        description="The most tool calls the agent may make to answer one customer message.",
     )
 
 
@@ -36,6 +36,6 @@ project.parameters.create(
                 "options": {"model": DEFAULT_CONFIG.model},
             },
         },
-        "max_turns": MaxTurnsParam,
+        "max_tool_calls": MaxToolCallsParam,
     },
 )

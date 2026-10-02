@@ -22,9 +22,11 @@ Open **evals/eval_agent.py**.
 Below the path setup, add:
 
 ~~~python
+import uuid
+
 from braintrust import Eval, init_dataset
 
-from agent.agent import InputFile, run_agent
+from agent.agent import Agent, InputFile
 from scorers import recipient_matches_crm
 
 PROJECT = "learn-bt"
@@ -42,16 +44,18 @@ def task(input):
     if attachment is not None:
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
-    return run_agent(
+    return Agent().chat_turn(
         input["prompt"],
+        session_id=uuid.uuid4().hex,
         attachments=attachments,
         history=input.get("history"),
     ).output
 ~~~
 
-A dataset attachment is hydrated before the task runs. The preserved
-`input.history` recreates the original conversation context when the failed turn
-was part of a multi-turn trace. The prior draft is not replayed. The agent must
+A dataset attachment is hydrated before the task runs. The agent holds only
+configuration, so each row supplies its own conversation context. The preserved
+`input.history` recreates the messages that preceded the failed turn when it
+was part of a multi-turn conversation. The prior draft is not replayed. The agent must
 produce a new one.
 
 ## Step 3: Define the eval

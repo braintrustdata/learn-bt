@@ -74,10 +74,10 @@ class InputFile:
 
 @dataclass
 class AgentResult:
-    """The output of a single agent run."""
+    """The output of one chat turn."""
 
     output: str
-    messages: list[dict[str, Any]] = field(default_factory=list)
+    new_messages: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _user_message(prompt: str, attachments: list[InputFile]) -> dict[str, Any]:
@@ -102,47 +102,50 @@ def _tool_message(call: ChatCompletionMessageFunctionToolCall) -> dict[str, Any]
     }
 
 
-def run_agent(
-    prompt: str,
-    attachments: Sequence[str | Path | InputFile] | None = None,
-    config: AgentConfig = DEFAULT_CONFIG,
-) -> AgentResult:
-    """Run the agent once and return its output.
+class Agent:
+    def __init__(self, config: AgentConfig = DEFAULT_CONFIG):
+        self.config = config
 
-    ``prompt`` is the user's request. ``attachments`` is an optional list passed to
-    the model as multimodal input. Each item is either a local file path, which is
-    read from disk, or an already-loaded ``InputFile``.
-    """
-    client = get_client()
-    input_files = [
-        a if isinstance(a, InputFile) else InputFile.from_path(a)
-        for a in attachments or []
-    ]
-    messages: list[dict[str, Any]] = [
-        *config.system_prompt_messages,
-        _user_message(prompt, input_files),
-    ]
-    tool_specs = tools.tool_specs()
+    def chat_turn(
+        self,
+        prompt: str,
+        session_id: str,
+        attachments: Sequence[str | Path | InputFile] | None = None,
+        history: Sequence[dict[str, Any]] | None = None,
+    ) -> AgentResult:
+        client = get_client()
+        input_files = [
+            a if isinstance(a, InputFile) else InputFile.from_path(a)
+            for a in attachments or []
+        ]
+        new_messages = [_user_message(prompt, input_files)]
+        tool_specs = tools.tool_specs()
+        tool_calls_made = 0
 
-    for _ in range(config.max_turns):
-        response = client.chat.completions.create(
-            model=config.model,
-            messages=messages,  # type: ignore
-            tools=tool_specs,
-        )
-        choice = response.choices[0]
-        message = choice.message
+        while True:
+            response = client.chat.completions.create(
+                model=self.config.model,
+                messages=[  # type: ignore
+                    *self.config.system_prompt_messages,
+                    *(history or []),
+                    *new_messages,
+                ],
+                tools=tool_specs,
+            )
+            choice = response.choices[0]
+            message = choice.message
 
-        messages.append(message.model_dump(exclude_none=True))
+            new_messages.append(message.model_dump(exclude_none=True))
 
-        if choice.finish_reason == "length":
-            raise AgentError("The model's response was cut off by the token limit.")
-        if message.refusal:
-            return AgentResult(output=message.refusal, messages=messages)
-        if not message.tool_calls:
-            return AgentResult(output=message.content or "", messages=messages)
+            if choice.finish_reason == "length":
+                raise AgentError("The model's response was cut off by the token limit.")
+            if not message.tool_calls:
+                return AgentResult(output=message.content or "", new_messages=new_messages)
 
-        for call in message.tool_calls:
-            messages.append(_tool_message(call))  # type: ignore
-
-    raise AgentError(f"The agent did not finish within {config.max_turns} turns.")
+            for call in message.tool_calls:
+                tool_calls_made += 1
+                if tool_calls_made > self.config.max_tool_calls:
+                    raise AgentError(
+                        f"The agent used more than {self.config.max_tool_calls} tool calls."
+                    )
+                new_messages.append(_tool_message(call))  # type: ignore

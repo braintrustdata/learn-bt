@@ -12,9 +12,9 @@ message", which the script renders as either a text PDF or a PNG and passes to
 the agent as input, so you have traces that exercise attachment logging.
 
 With --conversation-turns, each generated request becomes the first turn in a
-conversation. The script then sends follow-up requests using the prior messages
-as history. Each conversation is one trace, with one nested agent run per
-customer turn.
+conversation. The script then sends follow-up requests, passing the messages so
+far as history. Each customer turn is its own trace, and the turns of one
+conversation share a session ID.
 
 Usage:
     uv run python -m scripts.seed --count 20
@@ -33,6 +33,7 @@ import json
 import os
 import random
 import textwrap
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -43,7 +44,7 @@ from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-from agent.agent import run_agent
+from agent.agent import Agent
 from agent.fixtures import ACCOUNTS, OPPORTUNITIES
 
 load_dotenv()
@@ -191,14 +192,19 @@ def _seed_one(
             f"({fixture_kind}, {label}) {turn_prompt}"
         )
     try:
-        if args.conversation_turns == 1:
-            run_agent(prompt, attachments=attachments)
-        else:
-            # Import only for the multi-turn exercise. The starting template does
-            # not define this function until the learner completes Step 1.
-            from agent.agent import run_conversation
-
-            run_conversation(turn_prompts, attachments_by_turn=attachments_by_turn)
+        agent = Agent()
+        history = None
+        session_id = uuid.uuid4().hex
+        for turn_prompt, turn_attachments in zip(
+            turn_prompts, attachments_by_turn, strict=True
+        ):
+            result = agent.chat_turn(
+                turn_prompt,
+                session_id=session_id,
+                attachments=turn_attachments,
+                history=history,
+            )
+            history = [*(history or []), *result.new_messages]
     except Exception as exc:  # keep seeding even if one run fails
         print(f"    run failed: {exc}")
 
@@ -221,7 +227,7 @@ def main() -> None:
         "--conversation-turns",
         type=int,
         default=1,
-        help="Customer turns per seeded conversation. Each conversation becomes one trace.",
+        help="Customer turns per seeded conversation.",
     )
     args = parser.parse_args()
 

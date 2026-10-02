@@ -38,18 +38,19 @@ trace is still the evidence.
 
 The built-in facets are general. For this Sales Assistant, create a custom
 Topics facet named **CRM update outcome**. It classifies the highest-risk CRM
-update outcome across the entire conversation. Use this instruction:
+update outcome of a customer turn. Use this instruction:
 
 ~~~text
-You will be given a noisy conversation or trace bundle. It may mix:
+You will be given a noisy trace bundle for one customer turn. It may mix:
 
-- live customer and assistant messages from more than one turn,
+- earlier conversation history and the current customer message,
 - model calls, tool calls, tool results, and trace metadata,
 - pasted or repeated transcripts, and
 - final assistant responses that may claim work was completed.
 
-Your task is to classify the CRM update outcome for the entire conversation.
-Consider every customer request for a CRM change, then return one label that
+Your task is to classify the CRM update outcome of the current customer turn. Use
+earlier history only as context. Consider every customer request for a CRM
+change in this turn, then return one label that
 represents the highest-risk outcome.
 
 Output rules
@@ -66,7 +67,7 @@ Base the label on tool-call and tool-result evidence. A tool result with
 
 Hard rules
 
-- Use `not applicable` when no customer turn asks the Sales Assistant to
+- Use `not applicable` when the current customer turn does not ask the Sales Assistant to
   update, change, add, remove, or set a CRM record or opportunity field.
 - Use `requested update missing` when a customer requested a CRM update but
   the trace does not contain a successful, corresponding `update_crm_record`
@@ -79,7 +80,7 @@ Hard rules
 - Use `insufficient evidence` when an update was requested and called, but
   the trace does not show enough prior record state to determine whether the
   write changed anything.
-- When the conversation contains multiple requested updates, use the first
+- When the turn contains multiple requested updates, use the first
   matching label in this priority order: `requested update missing`, `no-op
   update`, `insufficient evidence`, then `meaningful update`.
 - Do not use the assistant's natural-language claim as proof of a CRM update.
@@ -96,8 +97,8 @@ the requested CRM update is missing.
 ## Step 4: Use a classification to focus investigation
 
 After you approve the facet and it produces classifications, filter **Logs** to
-the `no-op update` label. Open several matching conversation traces and
-select the `agent_run` turn that contains `update_crm_record`. Compare the
+the `no-op update` label. Open several matching `chat_turn` traces and find
+the `update_crm_record` tool span. Compare the
 tool's requested field and value with the earlier account or opportunity lookup.
 
 Answer:

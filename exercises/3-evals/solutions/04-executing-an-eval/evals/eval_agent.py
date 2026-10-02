@@ -1,13 +1,14 @@
 """Eval for the Sales Assistant."""
 
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from braintrust import Eval, init_dataset
 
-from agent.agent import InputFile, run_agent
+from agent.agent import Agent, InputFile
 from scorers import recipient_matches_crm
 
 PROJECT = "learn-bt"
@@ -20,8 +21,9 @@ def task(input):
     if attachment is not None:
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
-    return run_agent(
+    return Agent().chat_turn(
         input["prompt"],
+        session_id=uuid.uuid4().hex,
         attachments=attachments,
         history=input.get("history"),
     ).output

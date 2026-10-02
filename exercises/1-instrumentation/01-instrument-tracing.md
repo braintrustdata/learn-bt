@@ -5,7 +5,7 @@ and seed traces after each one. This makes it clear what each change adds.
 
 `scripts.seed` is a traffic generator, not tracing code. For each run, it
 selects an account or opportunity fixture, asks an LLM to write a realistic
-account-executive request, and passes that request to `run_agent()`.
+account-executive request, and passes that request to `Agent.chat_turn()`.
 
 ## Step 1: Log model spans
 
@@ -72,7 +72,7 @@ uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
 ```
 
 The seeder asks an LLM to write a customer message, then alternates between a
-PDF and PNG version of that message. `run_agent()` sends the file to the model.
+PDF and PNG version of that message. `chat_turn()` sends the file to the model.
 Because the client is wrapped, Braintrust stores it as an `Attachment` on the
 nested `llm` span.
 
@@ -84,25 +84,54 @@ previewable PDF or image attachment. The attachment represents forwarded custome
 ## Step 3: Add trace structure
 
 The wrapped client records model calls, but it does not know which model calls,
-tools, and helper functions belong to one agent run. Add `@traced` decorators
-to create that hierarchy.
+tools, and helper functions belong to one customer turn. Add spans to create
+that hierarchy.
 
-### Make `run_agent()` the root span
+### Make `chat_turn()` the root span
 
-In `agent/agent.py`, extend the Braintrust import:
-
-```python
-from braintrust import traced, wrap_openai
-```
-
-Then add this decorator directly above `run_agent()`:
+`Agent.chat_turn()` answers one customer message. In `agent/agent.py`, extend
+the Braintrust import:
 
 ```python
-@traced(type="task", name="agent_run")
-def run_agent(...):
+from braintrust import start_span, wrap_openai
 ```
 
-One call to `run_agent()` is now one root `agent_run` span.
+Then wrap the body of `chat_turn()`, everything after its docstring, in a span.
+Indent the existing code one level under the `with` block:
+
+```python
+with start_span(name="chat_turn", type="task") as span:
+    client = get_client()
+    # ... the rest of the existing body, indented ...
+```
+
+One call to `chat_turn()` is now one `chat_turn` trace. The agent holds no
+conversation state, so a multi-turn conversation is a series of `chat_turn`
+traces. Each later turn receives the earlier messages as its `history` input.
+
+### Log the turn's request and reply
+
+`start_span()` records the span's timing and nesting, but it does not capture
+any data on its own. Log the request and the reply yourself. Immediately after
+the `input_files` list, add:
+
+```python
+span.log(input={"prompt": prompt, "history": history})
+```
+
+The input is the request plus the messages from earlier turns, which is
+everything needed to replay the turn. Then find the branch that returns the final
+reply and log only the reply text before returning the result:
+
+```python
+if not message.tool_calls:
+    result = AgentResult(output=message.content or "", new_messages=new_messages)
+    span.log(output={"output": result.output})
+    return result
+```
+
+The output holds the reply and not `new_messages`, which would repeat every
+nested model and tool span.
 
 ### Mark the agent tools
 
@@ -154,22 +183,31 @@ def search_docs(...):
 For now, let the decorator capture each helper's normal input and output. You
 will take control of `search_docs()` data in the next step.
 
-Run the seed command again:
+Run three two-turn conversations. `--conversation-turns` is the number of
+customer messages in one conversation, which is separate from
+`config.max_tool_calls`, the number of tool calls the agent may make to answer
+one message:
 
 ```bash
-uv run python -m scripts.seed --count 5
+uv run python -m scripts.seed --count 3 --conversation-turns 2
 ```
 
-In **Logs**, open one new trace. It should have an `agent_run` task root, with
-LLM, tool, and fixture spans nested underneath.
+This creates six `chat_turn` traces, two for each conversation. In **Logs**,
+open one of them. It should have a `chat_turn` task root, with LLM, tool, and
+fixture spans nested underneath.
 
-- `agent_run` is the task root for one complete agent run.
+```text
+chat_turn
+├── Chat Completion
+├── tool and helper spans
+└── Chat Completion
+```
+
+- `chat_turn` is the task root for one customer turn.
 - `Chat Completion` span is nested LLM work.
 - `draft_email`, `update_crm_record`, and `lookup_customer`
   appear as tool spans.
 - `find_accounts` or `search_docs` appears as a helper span
-
-![Agent run root span with nested LLM and tool spans](assets/03-agent-run-trace-structure.png)
 
 ## Step 4: Log useful custom data
 
@@ -179,21 +217,40 @@ safer representation of large data.
 
 ### Mark runs that include attachments
 
-In `agent/agent.py`, change the Braintrust import to include `current_span`:
+In `agent/agent.py`, find the `span.log(input=...)` call you added in Step 3.
+Add a `metadata` argument to it:
 
 ```python
-from braintrust import current_span, traced, wrap_openai
+span.log(
+    input={"prompt": prompt, "history": history},
+    metadata={"has_attachments": bool(attachments)},
+)
 ```
 
-Inside `run_agent()`, find the existing `input_files` list. Immediately after
-it, add:
-
-```python
-current_span().log(metadata={"has_attachments": bool(attachments)})
-```
-
-This puts one boolean on the root `agent_run` span. You can later filter for
+This puts one boolean on the root `chat_turn` span. You can later filter for
 file-bearing runs without opening each nested LLM span.
+
+### Group turns into a conversation
+
+Each `chat_turn` is its own trace, so nothing yet ties the turns of one
+conversation together. The caller already owns the conversation, so it also
+owns a session ID. `chat_turn()` requires a `session_id`, and the seed
+script generates one per conversation. The turn number is the number of user
+messages already in `history`, plus one. Record both in the same metadata:
+
+```python
+turn_number = sum(m["role"] == "user" for m in history or []) + 1
+span.log(
+    input={"prompt": prompt, "history": history},
+    metadata={
+        "has_attachments": bool(attachments),
+        "session_id": session_id,
+        "turn_number": turn_number,
+    },
+)
+```
+
+This session id will allow us to group all turns of a conversation to reconstruct a full conversation, and the turn number puts them in order.
 
 ### Trim the knowledge-base search output
 
@@ -226,14 +283,18 @@ writing entire knowledge-base documents to the trace.
 Run the final seed command:
 
 ```bash
-uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
+uv run python -m scripts.seed --count 5 --conversation-turns 2 --attachment-ratio 1.0
 ```
 
-In a trace confirm both of the following:
+In a trace confirm each of the following:
 
-1. The root `agent_run` span has `metadata.has_attachments`. It is `true` for runs with an attachment and `false` otherwise.
+1. The root `chat_turn` span has `metadata.has_attachments`. It is `true` for turns with an attachment and `false` otherwise. It also has `metadata.session_id`, which is the same for both turns of a conversation, and `metadata.turn_number`, which is 1 for the first turn and 2 for the second.
 
-2. For one of the  `search_docs` child spans beneath, you should see:
+2. The `chat_turn` input has `prompt` and `history`. The output has only
+   `output`, with no `new_messages`. For the first turn of a conversation
+   `history` is empty. For the second turn it holds the first turn's messages.
+
+3. For one of the  `search_docs` child spans beneath, you should see:
 
 - Input with only the `query`.
 - Output with `num_hits` and `doc_ids`.

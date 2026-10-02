@@ -39,8 +39,7 @@ traces.
 ## Step 3 Inspect the evidence trace
 
 The Pattern report links to its evidence traces. Open one in the side panel and
-start with the `conversation` root, then select the relevant `agent_run`
-turn. Compare the original request with the
+start with the `chat_turn` root, which is one customer turn. Compare the original request with the
 final response, then expand the model and tool spans to see how the agent
 produced that outcome.
 

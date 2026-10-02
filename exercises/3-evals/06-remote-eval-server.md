@@ -20,10 +20,10 @@ and replace the commented-out template with:
 project = braintrust.projects.create(name="learn-bt")
 
 
-class MaxTurnsParam(BaseModel):
+class MaxToolCallsParam(BaseModel):
     value: int = Field(
-        default=DEFAULT_CONFIG.max_turns,
-        description="The most model calls a single agent run may make.",
+        default=DEFAULT_CONFIG.max_tool_calls,
+        description="The most tool calls the agent may make to answer one customer message.",
     )
 
 
@@ -43,13 +43,13 @@ project.parameters.create(
                 "options": {"model": DEFAULT_CONFIG.model},
             },
         },
-        "max_turns": MaxTurnsParam,
+        "max_tool_calls": MaxToolCallsParam,
     },
 )
 ~~~
 
 The prompt parameter renders editable prompt and model controls.
-`MaxTurnsParam` exposes the runtime limit without exposing the rest of the agent
+`MaxToolCallsParam` exposes the runtime limit without exposing the rest of the agent
 configuration.
 
 Push from inside `evals`:
@@ -59,16 +59,18 @@ cd evals
 bt functions push parameters.py --env-file ../.env
 ~~~
 
-In Braintrust, confirm that the prompt, model, and maximum-turn controls are visible in the **Parameters** tab.
+In Braintrust, confirm that the prompt, model, and maximum-tool-calls controls are visible in the **Parameters** tab.
 
 ## Step 2: Write the remote eval task
 
 Open **evals/eval_agent_remote_server.py**. Add these imports below the path setup:
 
 ~~~python
+import uuid
+
 from braintrust import Eval, load_parameters
 
-from agent.agent import InputFile, run_agent
+from agent.agent import Agent, InputFile
 from agent.config import AgentConfig
 from scorers import recipient_matches_crm
 
@@ -88,7 +90,7 @@ def task(input, hooks):
     config = AgentConfig(
         model=prompt_param.options.get("model"),
         system_prompt_messages=system_prompt_messages,
-        max_turns=hooks.parameters["max_turns"],
+        max_tool_calls=hooks.parameters["max_tool_calls"],
     )
 
     attachments = []
@@ -96,7 +98,9 @@ def task(input, hooks):
     if attachment is not None:
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
-    return run_agent(input["prompt"], attachments=attachments, config=config).output
+    return Agent(config).chat_turn(
+        input["prompt"], session_id=uuid.uuid4().hex, attachments=attachments
+    ).output
 
 
 Eval(

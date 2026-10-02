@@ -1,13 +1,14 @@
 """Remote eval server for the Sales Assistant."""
 
 import sys
+import uuid
 from pathlib import Path
 
 from braintrust import Eval, load_parameters
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent.agent import InputFile, run_agent
+from agent.agent import Agent, InputFile
 from agent.config import AgentConfig
 from scorers import recipient_matches_crm
 
@@ -24,7 +25,7 @@ def task(input, hooks):
     config = AgentConfig(
         model=prompt_param.options.get("model"),
         system_prompt_messages=system_prompt_messages,
-        max_turns=hooks.parameters["max_turns"],
+        max_tool_calls=hooks.parameters["max_tool_calls"],
     )
 
     attachments = []
@@ -32,7 +33,9 @@ def task(input, hooks):
     if attachment is not None:
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
-    return run_agent(input["prompt"], attachments=attachments, config=config).output
+    return Agent(config).chat_turn(
+        input["prompt"], session_id=uuid.uuid4().hex, attachments=attachments
+    ).output
 
 
 Eval(
