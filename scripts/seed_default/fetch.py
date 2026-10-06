@@ -4,7 +4,7 @@ Maintainer tool, not part of the workshop.
 
 Usage:
     uv run python -m scripts.seed_default.fetch --source-project my-project
-    uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
+    uv run python -m scripts.seed_default.fetch --source-project my-project --sessions 150
 
 Requires BRAINTRUST_API_KEY with read access to the source project.
 """
@@ -34,11 +34,12 @@ from .snapshot import (
 
 load_dotenv()
 
-DEFAULT_TRACES = 300
+DEFAULT_SESSIONS = 50
 
 # BTQL caps a single query at 1000 rows, so traces are fetched a chunk at a time.
 BTQL_MAX_LIMIT = 1000
 TRACES_PER_QUERY = 25
+SESSIONS_PER_QUERY = 25
 ATTACHMENT_DOWNLOAD_ATTEMPTS = 3
 
 # Automation output (Patterns, online scorers) points at rules that live in the
@@ -80,17 +81,51 @@ def _btql(session: requests.Session, query: str) -> list[dict[str, Any]]:
     return response.json()["data"]
 
 
-def _fetch_spans(
-    session: requests.Session, project_id: str, traces: int, root_name: str
-) -> list[dict[str, Any]]:
-    """Fetch every span belonging to the ``traces`` most recent traces."""
+def _recent_session_ids(
+    session: requests.Session, project_id: str, sessions: int, root_name: str
+) -> list[str]:
+    """Return the ``sessions`` most recently active session IDs, newest first."""
     roots = _btql(
         session,
-        f"select: root_span_id from: project_logs('{project_id}') "
-        f"filter: is_root and name = '{root_name}' sort: created desc limit: {traces}",
+        f"select: metadata.session_id as session_id from: project_logs('{project_id}') "
+        f"filter: is_root and name = '{root_name}' sort: created desc limit: {BTQL_MAX_LIMIT}",
     )
-    root_span_ids = [row["root_span_id"] for row in roots]
+    session_ids = list(dict.fromkeys(row["session_id"] for row in roots if row["session_id"]))
+    if len(session_ids) < sessions and len(roots) == BTQL_MAX_LIMIT:
+        raise SystemExit(
+            f"The {BTQL_MAX_LIMIT} most recent turns hold only {len(session_ids)} sessions. "
+            "Ask for fewer sessions."
+        )
+    return session_ids[:sessions]
 
+
+def _session_root_span_ids(
+    session: requests.Session, project_id: str, session_ids: list[str], root_name: str
+) -> list[str]:
+    """Return the root span of every turn in the given sessions."""
+    root_span_ids: list[str] = []
+    for start in range(0, len(session_ids), SESSIONS_PER_QUERY):
+        chunk = session_ids[start : start + SESSIONS_PER_QUERY]
+        id_list = ", ".join(f"'{session_id}'" for session_id in chunk)
+        roots = _btql(
+            session,
+            f"select: root_span_id from: project_logs('{project_id}') "
+            f"filter: is_root and name = '{root_name}' and metadata.session_id IN ({id_list}) "
+            f"limit: {BTQL_MAX_LIMIT}",
+        )
+        if len(roots) == BTQL_MAX_LIMIT:
+            raise SystemExit(
+                f"A chunk of {len(chunk)} sessions filled the {BTQL_MAX_LIMIT}-row query limit, "
+                "so some turns would be missing. Lower SESSIONS_PER_QUERY and re-run."
+            )
+        root_span_ids.extend(row["root_span_id"] for row in roots)
+    return root_span_ids
+
+
+def _fetch_spans(
+    session: requests.Session, project_id: str, root_span_ids: list[str]
+) -> list[dict[str, Any]]:
+    """Fetch every span belonging to the given traces."""
     spans: list[dict[str, Any]] = []
     for start in range(0, len(root_span_ids), TRACES_PER_QUERY):
         chunk = root_span_ids[start : start + TRACES_PER_QUERY]
@@ -203,9 +238,9 @@ def _download_attachments(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Record project logs into a replayable snapshot.")
     parser.add_argument("--source-project", required=True,
-                        help="Project to record traces from.")
-    parser.add_argument("--traces", type=int, default=DEFAULT_TRACES,
-                        help="Number of most recent traces to record.")
+                        help="Project to record sessions from.")
+    parser.add_argument("--sessions", type=int, default=DEFAULT_SESSIONS,
+                        help="Number of most recent sessions to record, with every turn of each.")
     parser.add_argument("--root-name", default="chat_turn",
                         help="Name of the root span to record.")
     parser.add_argument("--out", type=Path, default=SNAPSHOT_DIR,
@@ -215,11 +250,15 @@ def main() -> None:
     session = _session()
     project_id, org_id = _resolve_project(session, args.source_project)
 
-    print(f"Fetching the {args.traces} most recent traces from {args.source_project}...")
-    spans = [cleaned for span in _fetch_spans(session, project_id, args.traces, args.root_name)
+    print(f"Fetching the {args.sessions} most recent sessions from {args.source_project}...")
+    session_ids = _recent_session_ids(session, project_id, args.sessions, args.root_name)
+    root_span_ids = _session_root_span_ids(session, project_id, session_ids, args.root_name)
+    spans = [cleaned for span in _fetch_spans(session, project_id, root_span_ids)
              if (cleaned := _clean(span))]
-    traces = sum(1 for span in spans if not span.get("span_parents"))
-    print(f"Fetched {len(spans)} spans across {traces} traces.")
+    print(
+        f"Fetched {len(spans)} spans across {len(root_span_ids)} traces "
+        f"in {len(session_ids)} sessions."
+    )
 
     args.out.mkdir(parents=True, exist_ok=True)
     print("Downloading attachments...")

@@ -35,9 +35,9 @@ snapshot.
 
 `fetch.py` rebuilds `snapshot/` from a live project. Run it when the agent
 changes enough that the recorded traces no longer look like what attendees
-would produce. It records the most recent 300 `chat_turn` roots by default.
+would produce. It records the most recent 50 sessions by default, with every `chat_turn` trace of each.
 
 ```bash
-uv run python -m scripts.seed --count 150 --concurrency 10
-uv run python -m scripts.seed_default.fetch --source-project my-project --traces 300
+uv run python -m scripts.seed --count 100 --concurrency 10
+uv run python -m scripts.seed_default.fetch --source-project my-project --sessions 100
 ```
