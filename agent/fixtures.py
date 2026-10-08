@@ -8,6 +8,9 @@ in ``tools.py`` read from (and pretend to write to) these dictionaries.
 
 import re
 
+from braintrust import current_span, traced
+
+@traced
 def find_accounts(query: str) -> list[dict]:
     """Return accounts whose id or name loosely matches the query."""
     q = query.strip().lower()
@@ -17,6 +20,7 @@ def find_accounts(query: str) -> list[dict]:
         if q in acct["id"].lower() or q in acct["name"].lower()
     ]
 
+@traced(notrace_io=True)
 def search_docs(query: str) -> list[dict]:
     """Return knowledge base docs matching the query in title, tags, or body.
 
@@ -41,6 +45,11 @@ def search_docs(query: str) -> list[dict]:
         ))
         if any(term in words for term in terms):
             hits.append(doc)
+    current_span().log(
+        input={"query": query},
+        output={"num_hits": len(hits), "doc_ids": [d["id"] for d in hits]},
+        metadata={"matched_terms": terms},
+    )
     return hits
 
 # ---------------------------------------------------------------------------

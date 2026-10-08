@@ -1,29 +1,38 @@
-"""Eval recipient correctness for the Sales Assistant.
-
-Run the agent over the `crm-recipient-mismatches` regression dataset and grade
-whether each new email draft uses the CRM primary-contact address. Run with:
-
-    bt eval evals/eval_agent.py
-
-The completed source is in
-exercises/3-evals/solutions/04-executing-an-eval/evals/eval_agent.py.
-"""
+"""Eval for the Sales Assistant."""
 
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-# Place local imports below here
+
+from braintrust import Eval, init_dataset
+
+from agent.agent import Agent, InputFile
+from scorers import email_quality, recipient_matches_crm
+
+PROJECT = "learn-bt"
+DATASET = "crm-recipient-mismatches"
 
 
-# def task(input):
-#     TODO
-#     pass
-#
-# Eval(
-#     PROJECT,
-#     experiment_name="recipient-mismatch-baseline",
-#     data=[],
-#     task=task,
-#     scores=[recipient_matches_crm],  # type: ignore
-# )
+def task(input):
+    attachments = []
+    attachment = input.get("attachment")
+    if attachment is not None:
+        attachments.append(InputFile.from_dataset_attachment(attachment))
+
+    return Agent().chat_turn(
+        input["prompt"],
+        session_id=uuid.uuid4().hex,
+        attachments=attachments,
+        history=input.get("history"),
+    ).output
+
+
+Eval(
+    PROJECT,
+    experiment_name="recipient-mismatch-baseline",
+    data=init_dataset(project=PROJECT, name=DATASET),
+    task=task,
+    scores=[recipient_matches_crm, email_quality],  # type: ignore
+)

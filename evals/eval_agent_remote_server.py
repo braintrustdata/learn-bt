@@ -24,6 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 #     PROJECT,
 #     data=[],
 #     task=task,
-#     scores=[recipient_matches_crm], #type: ignore
+#     scores=[recipient_matches_crm, email_quality], #type: ignore
 #     parameters=saved_parameters,
 # )

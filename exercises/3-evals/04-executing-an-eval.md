@@ -27,7 +27,7 @@ import uuid
 from braintrust import Eval, init_dataset
 
 from agent.agent import Agent, InputFile
-from scorers import recipient_matches_crm
+from scorers import email_quality, recipient_matches_crm
 
 PROJECT = "learn-bt"
 DATASET = "crm-recipient-mismatches"
@@ -68,12 +68,17 @@ Eval(
     experiment_name="recipient-mismatch-baseline",
     data=init_dataset(project=PROJECT, name=DATASET),
     task=task,
-    scores=[recipient_matches_crm],  # type: ignore
+    scores=[recipient_matches_crm, email_quality],  # type: ignore
 )
 ~~~
 
 The scorer evaluates the new run trace. A score of 1 means the new draft
 recipient matches a primary-contact email returned in its own CRM lookup.
+
+The experiment also records **email_quality** for the same new draft. Inspect
+its explanations for placeholders, excessive length, or tone issues. This dataset
+was selected for recipient failures, so its email-quality score is a baseline
+for these cases, not a measure of all email traffic.
 
 ## Step 4: Run the baseline
 

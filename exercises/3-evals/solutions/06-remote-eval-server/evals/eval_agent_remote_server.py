@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent.agent import Agent, InputFile
 from agent.config import AgentConfig
-from scorers import recipient_matches_crm
+from scorers import email_quality, recipient_matches_crm
 
 PROJECT = "learn-bt"
 saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
@@ -42,6 +42,6 @@ Eval(
     PROJECT,
     data=[],
     task=task,
-    scores=[recipient_matches_crm],  # type: ignore
+    scores=[recipient_matches_crm, email_quality],  # type: ignore
     parameters=saved_parameters,
 )

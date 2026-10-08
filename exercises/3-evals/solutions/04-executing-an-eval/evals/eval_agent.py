@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from braintrust import Eval, init_dataset
 
 from agent.agent import Agent, InputFile
-from scorers import recipient_matches_crm
+from scorers import email_quality, recipient_matches_crm
 
 PROJECT = "learn-bt"
 DATASET = "crm-recipient-mismatches"
@@ -34,5 +34,5 @@ Eval(
     experiment_name="recipient-mismatch-baseline",
     data=init_dataset(project=PROJECT, name=DATASET),
     task=task,
-    scores=[recipient_matches_crm],  # type: ignore
+    scores=[recipient_matches_crm, email_quality],  # type: ignore
 )
