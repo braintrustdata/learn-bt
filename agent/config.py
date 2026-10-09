@@ -29,7 +29,7 @@ class AgentConfig(BaseModel):
     system_prompt_messages: list[dict[str, Any]] = Field(
         default_factory=lambda: [{"role": "system", "content": SYSTEM_PROMPT}]
     )
-    max_turns: int = 10
+    max_tool_calls: int = 10
 
 
 DEFAULT_CONFIG = AgentConfig()

@@ -1,15 +1,16 @@
-"""Eval for the Sales Assistant
+"""Eval recipient correctness for the Sales Assistant.
 
-Run the agent over the `email-drafting` dataset and grade each drafted
-email with the scorers you created. Run with:
+Run the agent over the `crm-recipient-mismatches` regression dataset and grade
+whether each new email draft uses the CRM primary-contact address. Run with:
 
     bt eval evals/eval_agent.py
 
-The reference implementation is in
-exercises/3-evals/03-executing-an-eval.solution.md.
+The completed source is in
+exercises/3-evals/solutions/04-executing-an-eval/evals/eval_agent.py.
 """
 
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -22,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 #
 # Eval(
 #     PROJECT,
-#     experiment_name="email-drafting-eval",
+#     experiment_name="recipient-mismatch-baseline",
 #     data=[],
 #     task=task,
-#     scores=[valid_email, email_goal_reached], #type: ignore
+#     scores=[recipient_matches_crm, email_quality],  # type: ignore
 # )
