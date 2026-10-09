@@ -12,8 +12,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Sequence
 
-import braintrust
-from braintrust import start_span, wrap_openai
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
@@ -22,7 +20,6 @@ from . import tools
 from .config import DEFAULT_CONFIG, AgentConfig
 
 load_dotenv()
-braintrust.init_logger(project="learn-bt")
 
 
 class AgentError(RuntimeError):
@@ -32,18 +29,14 @@ class AgentError(RuntimeError):
 @lru_cache(maxsize=1)
 def get_client() -> OpenAI:
     if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
-        return wrap_openai(
-            OpenAI(
-                base_url=os.environ["BASE_URL"]
-            )
+        return OpenAI(
+            base_url=os.environ["BASE_URL"]
         )
 
-    return wrap_openai(
-        OpenAI(
-            base_url=os.environ["BASE_URL"],
-            api_key=os.environ["BRAINTRUST_API_KEY"],
-            default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
-        )
+    return OpenAI(
+        base_url=os.environ["BASE_URL"],
+        api_key=os.environ["BRAINTRUST_API_KEY"],
+        default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
     )
 
 
@@ -120,51 +113,39 @@ class Agent:
         attachments: Sequence[str | Path | InputFile] | None = None,
         history: Sequence[dict[str, Any]] | None = None,
     ) -> AgentResult:
-        with start_span(name="chat_turn", type="task") as span:
-            client = get_client()
-            input_files = [
-                a if isinstance(a, InputFile) else InputFile.from_path(a)
-                for a in attachments or []
-            ]
-            turn_number = sum(m["role"] == "user" for m in history or []) + 1
-            span.log(
-                input={"prompt": prompt, "history": history},
-                metadata={
-                    "has_attachments": bool(attachments),
-                    "session_id": session_id,
-                    "turn_number": turn_number,
-                },
+        client = get_client()
+        input_files = [
+            a if isinstance(a, InputFile) else InputFile.from_path(a)
+            for a in attachments or []
+        ]
+        new_messages = [_user_message(prompt, input_files)]
+        tool_specs = tools.tool_specs()
+        tool_calls_made = 0
+
+        while True:
+            response = client.chat.completions.create(
+                model=self.config.model,
+                messages=[  # type: ignore
+                    *self.config.system_prompt_messages,
+                    *(history or []),
+                    *new_messages,
+                ],
+                tools=tool_specs,
             )
-            new_messages = [_user_message(prompt, input_files)]
-            tool_specs = tools.tool_specs()
-            tool_calls_made = 0
+            choice = response.choices[0]
+            message = choice.message
 
-            while True:
-                response = client.chat.completions.create(
-                    model=self.config.model,
-                    messages=[  # type: ignore
-                        *self.config.system_prompt_messages,
-                        *(history or []),
-                        *new_messages,
-                    ],
-                    tools=tool_specs,
-                )
-                choice = response.choices[0]
-                message = choice.message
+            new_messages.append(message.model_dump(exclude_none=True))
 
-                new_messages.append(message.model_dump(exclude_none=True))
+            if choice.finish_reason == "length":
+                raise AgentError("The model's response was cut off by the token limit.")
+            if not message.tool_calls:
+                return AgentResult(output=message.content or "", new_messages=new_messages)
 
-                if choice.finish_reason == "length":
-                    raise AgentError("The model's response was cut off by the token limit.")
-                if not message.tool_calls:
-                    result = AgentResult(output=message.content or "", new_messages=new_messages)
-                    span.log(output={"output": result.output})
-                    return result
-
-                for call in message.tool_calls:
-                    tool_calls_made += 1
-                    if tool_calls_made > self.config.max_tool_calls:
-                        raise AgentError(
-                            f"The agent used more than {self.config.max_tool_calls} tool calls."
-                        )
-                    new_messages.append(_tool_message(call))  # type: ignore
+            for call in message.tool_calls:
+                tool_calls_made += 1
+                if tool_calls_made > self.config.max_tool_calls:
+                    raise AgentError(
+                        f"The agent used more than {self.config.max_tool_calls} tool calls."
+                    )
+                new_messages.append(_tool_message(call))  # type: ignore

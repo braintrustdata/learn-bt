@@ -12,7 +12,6 @@ from typing import Callable
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 from pydantic import BaseModel, Field, ValidationError
-from braintrust import traced
 
 from . import fixtures
 
@@ -21,7 +20,6 @@ class LookupCustomer(BaseModel):
     query: str = Field(description="An account id, such as ACC-1001, or a company name.")
 
 
-@traced(type="tool")
 def lookup_customer(query: str) -> dict:
     """Look up a customer account in the CRM by account id or by company name. Returns account details including the primary contact, tier, renewal date,
     and ARR.
@@ -36,7 +34,6 @@ class GetOpportunity(BaseModel):
     opportunity_id: str = Field(description="An opportunity id, such as OPP-5001.")
 
 
-@traced(type="tool")
 def get_opportunity(opportunity_id: str) -> dict:
     """Get the details of a sales opportunity by its id. Returns its stage, amount, close date, and next step.
     """
@@ -50,7 +47,6 @@ class SearchKnowledgeBase(BaseModel):
     query: str = Field(description="The search terms to look for.")
 
 
-@traced(type="tool")
 def search_knowledge_base(query: str) -> dict:
     """Search the internal knowledge base for pricing, security, onboarding, and
     competitive positioning information. Use this before making factual claims about the product.
@@ -70,7 +66,6 @@ class DraftEmail(BaseModel):
     body: str = Field(description="The body of the email.")
 
 
-@traced(type="tool")
 def draft_email(recipient: str, subject: str, body: str) -> dict:
     """Draft an email to a customer contact. Returns the drafted email for review; it is not sent automatically.
     """
@@ -84,7 +79,6 @@ class UpdateCrmRecord(BaseModel):
     value: str = Field(description="The new value for the field.")
 
 
-@traced(type="tool")
 def update_crm_record(record_id: str, field: str, value: str) -> dict:
     """Update a field on a CRM account or opportunity record. Mocked."""
     result = {"record_id": record_id, "field": field, "value": value}
@@ -125,4 +119,3 @@ def dispatch(name: str, arguments: str) -> dict:
         return fn(**args.model_dump())
     except Exception as exc:
         return {"error": f"{name} failed: {type(exc).__name__}: {exc}"}
-
