@@ -6,8 +6,8 @@ outputs, then returns failure hypotheses with links to the source evidence.
 
 ## Step 1: Run the Debugger
 
-From **Logs**, open one of the recipient-mismatch traces you confirmed in
-Exercise 2.3. Note the requested customer, the CRM primary-contact email, and the
+From **Logs**, open a trace with a customer email recipient mismatch supported
+by CRM lookup and draft tool evidence. Note the requested customer, the CRM primary-contact email, and the
 recipient in the actual `draft_email` output before running the Debugger.
 
 Select the **Debugger** layout in the trace, then select **Run debugger**.
@@ -36,5 +36,4 @@ which examples are suitable regression cases and which need human review.
 
 Compare the returned evidence with your original finding. Record the supported
 failure, the suspected cause, and links to the relevant spans. A debugger report
-is a hypothesis until the evidence supports it. In Section 3, an account-team
-reviewer will confirm these drafts and help define what good behavior means.
+is a hypothesis until the evidence supports it.

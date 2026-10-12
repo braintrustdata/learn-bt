@@ -1,6 +1,6 @@
 # 1.2 Log attachments on the root span
 
-Exercise 1.1 showed that `wrap_openai()` automatically captures attachments on
+`wrap_openai()` automatically captures attachments on
 the nested LLM span. In this exercise, you will also log the attachment on the
 root `chat_turn` span. That makes the file visible when you filter logs, review
 a run, or add the run to a dataset.

@@ -312,10 +312,10 @@ In a trace confirm each of the following:
 
 ## Check the original request
 
-Run `uv run python main.py` and repeat the two requests from Exercise 0.2.
-Open their traces and answer the question you wrote down. Locate the CRM lookup
-and the actual draft tool output. In the next exercise, preserve attachments on
-the root input so those requests carry their full context into review and evals.
+Run `uv run python main.py`, ask it to look up ACC-1001, then ask for a concise
+follow-up email to the CRM primary contact. Open the traces and locate the CRM
+lookup and actual draft tool output. Check whether the execution evidence
+explains behavior that the final reply alone could not.
 
 ## Answer key
 

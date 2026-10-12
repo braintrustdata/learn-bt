@@ -56,7 +56,7 @@ metadata.has_attachments = true
 ~~~
 
 Open a result, which is the `chat_turn` trace for one customer turn.
-Its input contains the attachment from Exercise 1.2. The `has_attachments`
+Its root input should contain the logged attachment. The `has_attachments`
 field lives on that turn, so you can find attachment-bearing work without
 opening every LLM span.
 
@@ -82,9 +82,7 @@ investigate but did not record it as structured metadata.
 ![Searching a multi-turn trace for an opportunity ID in Braintrust Logs](assets/03-search-business-context.png)
 
 Before exporting, find a request that drafted a customer email. Open **Customer
-email review**, compare the request and draft, and save its trace link. You will
-investigate the broader usage distribution next, then look for recurring email
-failures with Loop.
+email review**, compare the request and draft, and save its trace link as evidence for the team investigation.
 
 ## Step 4: Export one row per customer turn with SQL
 

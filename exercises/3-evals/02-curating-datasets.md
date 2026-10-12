@@ -1,8 +1,8 @@
 # 3.2 Build a recipient-mismatch regression dataset
 
-In Exercises 2.3 and 2.4, you investigated customer email drafts whose recipient
-did not match the CRM primary contact. Human review in Exercise 3.1 confirmed
-the failure criteria. Turn the proven examples into a
+Start with traces of customer email drafts whose recipient did not match the
+CRM primary contact. Confirm the failures against the AE request and tool
+evidence, using human reviews when available. Turn proven examples into a
 dataset named **crm-recipient-mismatches**.
 
 This is a focused regression dataset. It contains only known recipient failures,
@@ -33,7 +33,7 @@ only recipient-mismatch failures. Each row must have `input.prompt`, and it must
 preserve conversation history and the source attachment when the original turn
 had them.
 
-Compare the source traces with your human reviews from Exercise 3.1. Loop
+Compare the source traces with any recorded human reviews. Loop
 proposes cases from trace evidence; you approve their inclusion. Remove a row
 if its source does not satisfy the recipient policy.
 

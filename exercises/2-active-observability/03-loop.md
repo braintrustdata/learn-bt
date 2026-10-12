@@ -4,9 +4,9 @@ Active observability applies AI to the traces you already collect. Start with a
 question in Loop, turn a supported recurring behavior into a Pattern, then
 inspect the Pattern's evidence in the trace itself.
 
-Topics showed the kinds of work AEs request. Now investigate whether the agent
-completes that work correctly. Bring the email trace and usage observations from
-Exercise 2.2, if Topics has finished processing.
+Use instrumented Sales Assistant traffic to investigate whether the agent
+completes AE requests correctly. If Topics classifications are available, use
+the task distribution to inform the investigation.
 
 ## Step 1: Discover candidate failures
 
@@ -74,7 +74,8 @@ Distinguish confirmed evidence from hypotheses. Do not create a dataset yet.
 
 Inspect the cited tool outputs yourself. Save links to confirmed mismatches and
 at least one draft that needs writing edits. If fresh traffic contains no
-mismatches, replay the included snapshot using Exercise 2.1's replay command,
+mismatches, replay the included snapshot with
+`uv run --env-file .env python -m scripts.seed_default --project learn-bt`,
 then repeat the investigation. Do not label a correct draft as a failure to
 complete the exercise.
 
@@ -82,5 +83,5 @@ For a team operating this assistant, revisiting the investigation daily would
 help identify new failures. Patterns retain findings and evidence for review;
 this exercise uses a one-time investigation and does not configure a schedule.
 
-Choose one confirmed email failure for the Debugger in Exercise 2.4. Keep the
-other source links for human review and dataset curation in Section 3.
+Record the confirmed failures, their source links, and the evidence supporting
+each finding.

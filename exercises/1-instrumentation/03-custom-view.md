@@ -5,8 +5,8 @@ details can make it harder for PMs and subject matter experts (SMEs) to inspect
 the part of a trace relevant to their review.
 
 Custom views present trace data in a UI built for a specific workflow. In this
-exercise, create a customer-email review view. You will use it again when the
-account-team expert confirms failures and reviews writing quality in Section 3.
+exercise, create a customer-email review view that an account-team expert can
+use to confirm recipient failures and assess writing quality.
 
 ## Step 1: Open a trace with a drafted email
 
@@ -27,8 +27,7 @@ and body. Show the CRM primary-contact name and email from lookup_customer next
 to the draft so a reviewer can check the recipient. Clearly mark missing CRM
 evidence. Use tool outputs for the draft, not the final assistant reply.
 Include thumbs up/down feedback that writes to the draft_email span metadata.
-Keep this quick feedback separate from the written human-review form we will
-configure later.
+Keep this quick feedback separate from the written human-review form used for written assessments.
 ~~~
 
 Loop uses the current trace to identify the relevant fields and generate the

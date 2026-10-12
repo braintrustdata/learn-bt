@@ -98,7 +98,7 @@ each new eval trace.
 Append the following to the same file. `LLMClassifier` maps a model's rating to
 a pass/fail score and includes an explanation with `use_cot=True`.
 
-The rubric encodes the workshop communication criteria you used in human review:
+The rubric defines the workshop communication criteria for human and automated review:
 no placeholders,
 concise writing, and a professional but conversational tone. Keep it fixed
 while you tune the agent's drafting prompt so the scores remain comparable.
@@ -180,7 +180,7 @@ trace that contains a `draft_email` span.
 
 ![A successful Recipient matches CRM scorer test](assets/03-recipient-matches-crm-scorer-test.png)
 
-For **email_quality**, run the writing examples you reviewed in Exercise 3.1.
+For **email_quality**, run writing examples with recorded human assessments.
 Compare the rating and explanation with your written assessment alongside the
 actual email. If they disagree, inspect the evidence before trusting the judge.
 Try a draft containing `[Your Name]` and confirm that the judge identifies

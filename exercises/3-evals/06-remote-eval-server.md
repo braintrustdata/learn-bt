@@ -148,7 +148,7 @@ scorers unchanged throughout the following comparison.
 Use the saved parameter defaults, which reflect the current application config.
 Run the dataset and label this variant **Current configuration**. Inspect its
 recipient and email-quality results. Compare them with the local experiment
-from Exercise 3.5; model and judge variation can cause some differences.
+for the current configuration; model and judge variation can cause some differences.
 
 ## Step 5: Compare an email-writing prompt variant
 
@@ -157,7 +157,7 @@ candidate**. Keep the model and tool-call limit the same so this experiment
 changes only the system prompt.
 
 Read the email-quality failures and their explanations, alongside the human
-reviews from Exercise 3.1. Add guidance to the candidate's system prompt that
+reviews recorded on the source traces. Add guidance to the candidate's system prompt that
 addresses the recurring issue. For example:
 
 ~~~text

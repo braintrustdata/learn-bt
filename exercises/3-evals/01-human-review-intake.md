@@ -1,8 +1,8 @@
 # 3.1 Review email failures with an account-team expert [UI]
 
-Loop and the Debugger identified candidate email failures. Now take the role of
+Start with instrumented traces containing candidate email failures. Take the role of
 an account-team expert: confirm which drafts are usable and explain what needs
-to change. Use **Customer email review** from Exercise 1.3 and a written review
+to change. Use the saved **Customer email review** view and a written review
 form so feedback stays with the draft's trace.
 
 For this workshop, a customer follow-up should use the intended account's CRM
@@ -40,7 +40,7 @@ unrelated model calls and tool spans, keeping the review workflow focused.
 
 ## Step 3: Review the investigation examples
 
-Save the scorer. Open a confirmed recipient mismatch from Exercise 2.3, assign
+Save the scorer. Open a trace with a CRM recipient mismatch, assign
 its `draft_email` span to yourself in **Review**, and inspect the trace with
 **Customer email review**. Submit a written review that names the CRM recipient,
 the actual recipient, and why this is a failure for the AE's request.
@@ -51,6 +51,5 @@ acceptable, explain why. Keep links to these examples for testing the scorer.
 
 Return to each reviewed span and confirm the text appears at `metadata.review`.
 The custom view's thumbs feedback captures a quick reaction; this form records
-the explanation. Human feedback remains on the source spans. In Exercise 3.2,
-you will verify dataset candidates against this review, and in Exercise 3.3 you
-will compare the writing judge's explanations with your assessments.
+the explanation. Human feedback remains on the source spans, providing evidence
+for dataset curation and a reference for checking automated judges.

@@ -5,8 +5,10 @@ to know how people use the assistant: account research, customer follow-ups, CRM
 updates, or something else. Topics classifies traffic so you can inspect that
 usage distribution without reading every conversation.
 
-Complete Exercise 2.1 first. Topics needs enough recent traffic to produce useful
-groups. Processing a new project can take time.
+Topics needs recent, instrumented traffic with `metadata.session_id` to produce
+useful conversation groups. Generate traffic with `scripts.seed` or replay the
+included snapshot with `scripts.seed_default`. Processing a new project can
+take time.
 
 ## Step 1: Enable Topics and group conversations
 
@@ -14,7 +16,7 @@ Open **learn-bt**, then **Topics**, and enable classification. Configure the
 Topics automation's **Scope** to **Group**, with **Group by** set to
 `metadata.session_id` and **Apply to** set to **First trace in group** for these
 completed conversations. Save the settings. Choose to backfill existing logs so
-the traffic from Exercise 2.1 is included.
+the seeded or replayed traffic is included.
 
 Each `chat_turn` remains its own trace. The shared session ID lets Topics analyze
 the full conversation, so a follow-up such as "draft the email" is interpreted
@@ -23,8 +25,7 @@ with the account context from earlier turns. See the
 for the grouping controls.
 
 Topics runs in the background and uses your organization's Topics credits. If
-processing is still underway, continue with Loop in Exercise 2.3 and return here
-when classifications are available.
+processing is still underway, return when classifications are available.
 
 ![Topics groups Sales Assistant traffic and links to source traces.](assets/05-topics-scatterplot-trace.png)
 
@@ -39,7 +40,7 @@ Then inspect **Issues** for candidate problems and **Sentiment** for the tone of
 interactions. Read the underlying traces before accepting a generated label.
 These classifications describe traffic; they do not establish correct behavior.
 
-## Step 3: Choose an investigation
+## Step 3: Record your findings
 
 Write down:
 
@@ -47,7 +48,6 @@ Write down:
 2. Where customer email drafting appears in the distribution.
 3. One email conversation worth investigating, with its trace link and why.
 
-Bring those observations to Loop in Exercise 2.3. The course will focus on email
-drafting because a usable follow-up needs both the right customer recipient and
-a complete, readable email. You will create one targeted regression dataset
-from confirmed failures later in the course.
+These observations describe how the assistant is used and identify conversations
+worth investigating. A usable customer follow-up needs both the right recipient
+and a complete, readable email.

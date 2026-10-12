@@ -7,8 +7,7 @@ that is fully traced, queried, evaluated, and set up for human and remote review
 
 ## How the exercises are organized
 
-Exercises are grouped into sections that match the workshop content. Work through
-them in order. Each later section builds on the state you left the agent in.
+Exercises are grouped into sections that match the workshop content.
 
 | Section | Folder | Theme |
 | --- | --- | --- |
@@ -29,23 +28,12 @@ investigate customer email failures. Preserve those failures in one dataset,
 measure the current agent, and improve it. Finally, let an account-team expert
 compare configuration changes through a remote eval server.
 
-## Exercise sequence
+## What to expect in each exercise
 
-- **Setup:** [environment](0-setup/01-setup-braintrust-cli.md), then
-  [assignment](0-setup/02-meet-the-agent.md).
-- **Instrumentation:** [tracing](1-instrumentation/01-instrument-tracing.md),
-  [attachments](1-instrumentation/02-log-attachments.md), and
-  [review view](1-instrumentation/03-custom-view.md).
-- **Active observability:** [search and SQL](2-active-observability/01-sql-querying.md),
-  [usage with Topics](2-active-observability/02-topics.md),
-  [failure discovery with Loop](2-active-observability/03-loop.md), and
-  [debugging an email failure](2-active-observability/04-debug-a-trace.md).
-- **Evals:** [human review](3-evals/01-human-review-intake.md),
-  [regression dataset](3-evals/02-curating-datasets.md),
-  [scorers](3-evals/03-creating-scorers.md),
-  [baseline](3-evals/04-executing-an-eval.md),
-  [recipient fix](3-evals/05-fix-recipient-selection.md), and
-  [remote iteration](3-evals/06-remote-eval-server.md).
+Each exercise introduces a problem or concept and walks through the steps to
+solve it and inspect the result. Prerequisites identify the data, code, or saved
+artifacts needed for the task. Answer keys support code exercises; linked
+documentation provides optional further reading.
 
 ## Prerequisites
 

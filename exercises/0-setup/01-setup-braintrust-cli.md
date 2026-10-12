@@ -61,10 +61,7 @@ Create a dedicated project for the workshop:
 bt projects create learn-bt --env-file .env
 ```
 
-If the project already exists, keep using it. In Exercise 1.1,
-`braintrust.init_logger(project="learn-bt")` sends the app's traces to this
-project.
-
+If the project already exists, create one with a different name. For example `learn-bt-<your-name>`. Keep in mind that whenever the project name is referenced in the exercises, remember to replace it with your chosen name.
 ## Check your setup
 
 At this point, you should have all of the following:

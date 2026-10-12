@@ -109,15 +109,10 @@ attribute a score change to the code change, rather than to different examples.
 
 ![Recipient-mismatch baseline and account-ID experiments compared](assets/05-recipient-mismatch-account-id-comparison.png)
 
-## Next: Make configuration experiments accessible
+## Record the comparison
 
-You changed the agent's tool configuration in code and measured the result.
 Record the recipient and email-quality scores and inspect any remaining writing
 failures. The recipient fix does not address placeholders, length, or tone.
-
-In Exercise 3.6, expose selected configuration through a remote eval server so an
-account-team expert can participate in this same process. They will compare
-prompt variants against the existing dataset and scorers.
 
 ## Answer key
 
