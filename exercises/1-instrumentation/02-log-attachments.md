@@ -39,12 +39,9 @@ span.log(
 )
 ```
 
-Use `input_files`, not the raw `attachments` argument. That single list already
-handles a local path and an attachment hydrated from a dataset row.
-
-Keep `prompt` and `history` in the input so the span still records the full
-request. Keep `session_id`, `turn_number` and `has_attachments`. The boolean gives you a fast filter. The attachment in
-the root input gives a reviewer the actual file to open.
+`input_files` contains the file bytes and metadata, whether the source was a
+local path or a dataset attachment. Preserve `prompt`, `history`, and the turn
+metadata so reviewers can filter requests and inspect their full context.
 
 ## Step 3: Run and inspect it
 

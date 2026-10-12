@@ -44,4 +44,3 @@ writes are mocked, so this course does not send email or change real records.
 
 You begin as the developer. During human review and playground iteration, you
 also take the role of an account-team expert who knows whether a draft is usable.
-Tracing provides the execution evidence needed to answer those questions.

@@ -116,13 +116,12 @@ Eval(
 )
 ~~~
 
-The playground sends parameter values through `hooks.parameters`. The task acts
-as an adapter: it converts those values to the app's `AgentConfig`, runs the
-agent, and returns its output. The agent and scorer logic remain versioned in
-the repository. Keep history and attachments, just as in the local eval: a
-follow-up request needs its earlier conversation context to remain replayable.
+The task converts `hooks.parameters` from the playground into `AgentConfig`,
+runs the agent, and returns its output. Preserve history and attachments so
+follow-up requests retain their context.
 
-Notice that data is left blank. That's because the dataset will be selected from the playground directly. Any additional scorers selected in the playground will run in addition to those defined here in the server code.
+Leave `data=[]` because you will select the dataset in the playground.
+Scorers selected there run alongside those defined in the server.
 
 ## Step 3: Start and register the server
 
@@ -193,8 +192,7 @@ bt eval evals/eval_agent.py --env-file .env
 
 Verify that the application configuration produces the behavior you selected.
 This dataset contains known recipient failures, so the results establish
-performance on those cases. You now have a repeatable path from production
-traces to reviewed failures, regression tests, and measured configuration changes.
+performance on those cases.
 
 ## Answer key
 

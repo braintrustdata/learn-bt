@@ -35,8 +35,7 @@ In the scorer visibility settings, add:
 span_attributes.name = "draft_email"
 ~~~
 
-The review applies to the drafted email. This filter hides the scorer on
-unrelated model calls and tool spans, keeping the review workflow focused.
+This shows the review form only on `draft_email` spans.
 
 ## Step 3: Review the investigation examples
 
@@ -51,5 +50,4 @@ acceptable, explain why. Keep links to these examples for testing the scorer.
 
 Return to each reviewed span and confirm the text appears at `metadata.review`.
 The custom view's thumbs feedback captures a quick reaction; this form records
-the explanation. Human feedback remains on the source spans, providing evidence
-for dataset curation and a reference for checking automated judges.
+the explanation. Use the saved reviews when curating the dataset and checking automated judges.

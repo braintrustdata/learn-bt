@@ -11,8 +11,7 @@ use to confirm recipient failures and assess writing quality.
 ## Step 1: Open a trace with a drafted email
 
 Select a trace that contains a `draft_email` span, then open the **Views** tab.
-Starting from a representative trace gives Loop the data it needs to build and
-preview the view.
+Loop uses this trace to build and preview the view.
 
 ## Step 2: Ask Loop to create the view
 
@@ -27,7 +26,7 @@ and body. Show the CRM primary-contact name and email from lookup_customer next
 to the draft so a reviewer can check the recipient. Clearly mark missing CRM
 evidence. Use tool outputs for the draft, not the final assistant reply.
 Include thumbs up/down feedback that writes to the draft_email span metadata.
-Keep this quick feedback separate from the written human-review form used for written assessments.
+Keep thumbs feedback separate from the written human-review form.
 ~~~
 
 Loop uses the current trace to identify the relevant fields and generate the
@@ -38,8 +37,7 @@ view. Review the preview and refine the prompt if any email fields are missing.
 Save the view, then open another trace that contains a `draft_email` span and
 select the new view.
 
-You should see the original request and drafted email in a focused layout,
-without navigating the raw span tree.
+Confirm that the view shows the request, CRM contact, and drafted email.
 
 You can edit a saved view to create a new version. When the view is ready for
 the broader review workflow, publish it so everyone with access to the project

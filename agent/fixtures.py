@@ -1,10 +1,4 @@
-"""Seed data for the Sales Assistant agent.
-
-These fixtures stand in for the systems a real sales assistant would talk to:
-a CRM (Salesforce), an opportunity pipeline, and an internal knowledge base.
-Everything is in-memory so the agent is easy to run and reason about. The tools
-in ``tools.py`` read from (and pretend to write to) these dictionaries.
-"""
+"""In-memory CRM accounts, opportunities, and knowledge-base documents."""
 
 import re
 
@@ -18,11 +12,10 @@ def find_accounts(query: str) -> list[dict]:
     ]
 
 def search_docs(query: str) -> list[dict]:
-    """Return knowledge base docs matching the query in title, tags, or body.
+    """Match query terms against document titles, tags, and bodies.
 
-    Matches on individual query terms rather than the whole query string, so
-    natural-language queries (e.g. "what is our pricing policy") still hit docs
-    that contain the meaningful words ("pricing", "policy").
+    Ignore stopwords so a question such as "what is our pricing policy" can
+    match documents containing "pricing" or "policy".
     """
     stopwords = {
         "the", "a", "an", "and", "or", "of", "to", "is", "are", "our", "we",
@@ -43,9 +36,7 @@ def search_docs(query: str) -> list[dict]:
             hits.append(doc)
     return hits
 
-# ---------------------------------------------------------------------------
-# CRM accounts (what `lookup_customer` searches)
-# ---------------------------------------------------------------------------
+# CRM accounts
 ACCOUNTS = {
     "ACC-1001": {
         "id": "ACC-1001",
@@ -119,9 +110,7 @@ ACCOUNTS = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# Opportunities (what `get_opportunity` returns)
-# ---------------------------------------------------------------------------
+# Opportunities
 OPPORTUNITIES = {
     "OPP-5001": {
         "id": "OPP-5001",
@@ -188,9 +177,7 @@ OPPORTUNITIES = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# Knowledge base (what `search_knowledge_base` / `read_doc` return)
-# ---------------------------------------------------------------------------
+# Knowledge base
 KNOWLEDGE_BASE = {
     "DOC-PRICING": {
         "id": "DOC-PRICING",

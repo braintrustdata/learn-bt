@@ -1,14 +1,6 @@
 """Saved eval parameters for the Sales Assistant.
 
-Build a versioned parameters object from the agent's config and push it so its
-values are editable and versioned in Braintrust. 
-
-Push with:
-
-    bt functions push evals/parameters.py
-
-The completed source is in
-exercises/3-evals/solutions/06-remote-eval-server/evals/parameters.py.
+Push with: bt functions push evals/parameters.py --env-file .env
 """
 
 import sys
@@ -19,6 +11,6 @@ from pydantic import BaseModel, Field, create_model
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent.config import DEFAULT_CONFIG
 
-# project = braintrust.projects.create(name="learn-bt") #idempotent operation
+# project = braintrust.projects.create(name="learn-bt")
 
 # project.parameters.create(TODO: implement the parameters object)

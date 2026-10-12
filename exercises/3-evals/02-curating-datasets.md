@@ -6,9 +6,8 @@ evidence, using human reviews when available. Turn proven examples into a
 dataset named **crm-recipient-mismatches**.
 
 This is a focused regression dataset. It contains only known recipient failures,
-not a representative sample of all Sales Assistant traffic. You will first show
-that the current agent still fails these cases, then fix the implementation and
-rerun this exact dataset.
+not a representative sample of all Sales Assistant traffic. Measure how often the current agent reproduces these failures, then fix the
+implementation and rerun the same dataset.
 
 ## Step 1: Create the failure dataset with Loop
 
@@ -33,8 +32,7 @@ only recipient-mismatch failures. Each row must have `input.prompt`, and it must
 preserve conversation history and the source attachment when the original turn
 had them.
 
-Compare the source traces with any recorded human reviews. Loop
-proposes cases from trace evidence; you approve their inclusion. Remove a row
+Compare the source traces with any recorded human reviews. Check that the cases Loop selected are supported by the trace evidence. Remove a row
 if its source does not satisfy the recipient policy.
 
 Open several rows and verify that `expected.crm_primary_contact_email` differs

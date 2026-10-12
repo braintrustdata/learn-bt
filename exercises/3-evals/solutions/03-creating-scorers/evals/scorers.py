@@ -15,10 +15,8 @@ def crm_primary_contact_emails(tool_spans):
         if span.span_attributes.get("name") != "lookup_customer":
             continue
 
-        accounts = span.output.get("accounts", [])
-        for account in accounts:
-            contact = account.get("primary_contact")
-            email = contact.get("email")
+        for account in span.output["accounts"]:
+            email = account["primary_contact"]["email"]
             if email:
                 emails.add(email.strip().casefold())
     return emails
@@ -40,7 +38,7 @@ async def recipient_matches_crm(trace=None):
     if not draft:
         return 0
 
-    recipient = draft.output.get("email").get("recipient")
+    recipient = draft.output["email"]["recipient"]
     expected_recipients = crm_primary_contact_emails(tool_spans)
     if not recipient or not expected_recipients:
         return 0
@@ -68,7 +66,7 @@ Guidelines:
 
 Choose one rating:
 P: Meets guidelines; ready to use without communication-style edits.
-F: Does not meet guidelines; would not be considered a high quality email by account executives.
+F: Needs communication-style edits to meet the guidelines.
 
 Subject: {{{subject}}}
 Body: {{{output}}}

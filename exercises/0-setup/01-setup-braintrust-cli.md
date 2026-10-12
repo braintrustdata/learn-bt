@@ -61,12 +61,14 @@ Create a dedicated project for the workshop:
 bt projects create learn-bt --env-file .env
 ```
 
-If the project already exists, create one with a different name. For example `learn-bt-<your-name>`. Keep in mind that whenever the project name is referenced in the exercises, remember to replace it with your chosen name.
+If the project already exists, choose another name, such as
+`learn-bt-<your-name>`, and use it wherever the exercises refer to `learn-bt`.
+
 ## Check your setup
 
-At this point, you should have all of the following:
+Confirm you have:
 
-- A local `.venv` created by `uv sync` and activated.
+- A local `.venv` created by `uv sync`.
 - A private `.env` with a valid API key and org name.
 - A `learn-bt` project in your Braintrust org.
 

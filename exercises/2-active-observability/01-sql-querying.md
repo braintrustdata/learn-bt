@@ -33,11 +33,10 @@ one Sales Assistant model call.
 uv run --env-file .env python -m scripts.seed_default --project learn-bt
 ~~~
 
-This option does not call a model provider. It replays about 300 recorded `chat_turn`
-traces, from 150 conversations of one to three turns, in `scripts/seed_default/snapshot/`. It uploads their attachments
-to your Braintrust org, gives the spans current timestamps, and inserts them
-into the `learn-bt` project. It still makes Braintrust API calls, but it does
-not generate new requests or agent responses.
+This replays about 300 recorded `chat_turn` traces from 150 conversations in
+`scripts/seed_default/snapshot/`. It uploads attachments and inserts the spans
+with current timestamps into `learn-bt`. It makes Braintrust API calls but no
+model calls.
 
 Each replay adds a new batch of about 300 traces; it does not replace the traffic
 already in the project. Run it once for this exercise. If you need to restart,
@@ -56,9 +55,8 @@ metadata.has_attachments = true
 ~~~
 
 Open a result, which is the `chat_turn` trace for one customer turn.
-Its root input should contain the logged attachment. The `has_attachments`
-field lives on that turn, so you can find attachment-bearing work without
-opening every LLM span.
+Its root input should contain the logged attachment. The root's
+`has_attachments` field lets you find these turns without opening each LLM span.
 
 ![Attachment-bearing agent turns filtered in Braintrust Logs](assets/02-filter-attachment-runs.png)
 
@@ -101,9 +99,7 @@ WHERE name = 'chat_turn'
 ORDER BY estimated_cost DESC
 ~~~
 
-Run it, then select **Download** to export a CSV. Each `chat_turn` trace holds
-one customer turn's request and response, so a row per trace is a row per
-customer turn.
+Run it, then select **Download** to export a CSV. Each row contains one customer turn's request and response.
 
 Inspect the most expensive turns and identify one customer-follow-up request.
 Open its trace to see which model and tool calls contributed to the cost, then

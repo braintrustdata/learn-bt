@@ -17,15 +17,14 @@ thread and ask:
 Review the current Sales Assistant logs. Identify up to three recurring behaviors or possible failure modes. For each one, link the supporting traces, explain the evidence, and say whether it is worth tracking.
 ~~~
 
-Loop investigates the project and returns an evidence-backed response.
+Inspect the trace links in Loop's response.
 
 ![Loop groups findings from Sales Assistant logs into reported Patterns.](assets/02-loop-investigation-and-reported-patterns.png)
 
 ## Step 2: Read a Pattern
 
-When Loop identifies a recurring behavior, it reports a Pattern. A Pattern is a
-saved report, not a single trace. It summarizes the behavior, explains why it
-matters, links to the supporting evidence, and suggests a next action.
+A Pattern is a saved report of recurring behavior, with supporting traces,
+its relevance, and a suggested next action.
 
 Select **Patterns** in the project sidebar to see every Pattern reported for the
 project. Open one and read its report. Check:
@@ -54,9 +53,8 @@ the request.
 
 ![A Pattern evidence span connects the trace to its reported Pattern.](assets/02-pattern-evidence-span.png)
 
-One trace can support more than one Pattern. In that case, the same trace has
-multiple Pattern spans. Read each one separately because they can describe
-different recurring behaviors in the same agent run.
+A trace can have several Pattern spans, each describing a different recurring
+behavior.
 
 ## Step 4: Focus on customer email drafting
 
@@ -79,9 +77,8 @@ mismatches, replay the included snapshot with
 then repeat the investigation. Do not label a correct draft as a failure to
 complete the exercise.
 
-For a team operating this assistant, revisiting the investigation daily would
-help identify new failures. Patterns retain findings and evidence for review;
-this exercise uses a one-time investigation and does not configure a schedule.
+Patterns retain findings and evidence for later review. Repeating this
+investigation daily could help a team identify new failures.
 
 Record the confirmed failures, their source links, and the evidence supporting
 each finding.

@@ -2,10 +2,10 @@
 
 The team can see the Sales Assistant's replies, but cannot explain the model
 and tool decisions behind them. The agent in `agent/` has no tracing yet.
-You will add it in four small stages
-and seed traces after each one. This makes it clear what each change adds.
+Add tracing in four stages, generating traffic after each to inspect the
+result.
 
-`scripts.seed` is a traffic generator, not tracing code. For each run, it
+`scripts.seed` generates traffic. For each run, it
 selects an account or opportunity fixture, asks an LLM to write a realistic
 account-executive request, and passes that request to `Agent.chat_turn()`.
 
@@ -127,9 +127,8 @@ the `input_files` list, add:
 span.log(input={"prompt": prompt, "history": history})
 ```
 
-The input is the request plus the messages from earlier turns, which is
-everything needed to replay the turn. Then find the branch that returns the final
-reply and log only the reply text before returning the result:
+This records the request and preceding messages. Find the branch that returns
+the final reply and log its text before returning:
 
 ```python
 if not message.tool_calls:
@@ -138,8 +137,8 @@ if not message.tool_calls:
     return result
 ```
 
-The output holds the reply and not `new_messages`, which would repeat every
-nested model and tool span.
+Logging only the reply avoids duplicating the messages already captured in
+nested model and tool spans.
 
 ### Mark the agent tools
 
@@ -210,11 +209,8 @@ chat_turn
 └── Chat Completion
 ```
 
-- `chat_turn` is the task root for one customer turn.
-- `Chat Completion` span is nested LLM work.
-- `draft_email`, `update_crm_record`, and `lookup_customer`
-  appear as tool spans.
-- `find_accounts` or `search_docs` appears as a helper span
+The root represents one customer turn. Model calls, tools such as
+`draft_email`, and helpers such as `find_accounts` appear beneath it.
 
 ## Step 4: Log useful custom data
 
@@ -235,15 +231,14 @@ span.log(
 ```
 
 This puts one boolean on the root `chat_turn` span. You can later filter for
-file-bearing runs without opening each nested LLM span.
+turns with attachments without opening each nested LLM span.
 
 ### Group turns into a conversation
 
-Each `chat_turn` is its own trace, so nothing yet ties the turns of one
-conversation together. The caller already owns the conversation, so it also
-owns a session ID. `chat_turn()` requires a `session_id`, and the seed
-script generates one per conversation. The turn number is the number of user
-messages already in `history`, plus one. Record both in the same metadata:
+Connect the turn-level traces with a shared session ID. The caller passes
+`session_id` to `chat_turn()`; the seed script generates one per conversation.
+Count earlier user messages in `history` to determine the turn number, then
+record both in metadata:
 
 ```python
 turn_number = sum(m["role"] == "user" for m in history or []) + 1
@@ -257,12 +252,12 @@ span.log(
 )
 ```
 
-This session id will allow us to group all turns of a conversation to reconstruct a full conversation, and the turn number puts them in order.
+Use `session_id` to group a conversation's turns and `turn_number` to order them.
 
 ### Trim the knowledge-base search output
 
-`search_docs()` returns full document bodies. The agent needs those bodies, but
-the trace only needs enough information to explain which documents matched.
+`search_docs()` returns full document bodies for the agent. For this helper's
+span, record which documents matched without repeating their bodies.
 
 In `agent/fixtures.py`, change the import and decorator:
 
@@ -293,20 +288,18 @@ Run the final seed command:
 uv run python -m scripts.seed --count 5 --attachment-ratio 1.0
 ```
 
-In a trace confirm each of the following:
+Open a trace and confirm:
 
-1. The root `chat_turn` span has `metadata.has_attachments`. It is `true` for turns with an attachment and `false` otherwise. It also has `metadata.session_id`, which is the same for every turn of a conversation, and `metadata.turn_number`, which counts up from 1 within a conversation.
+1. The root metadata has `has_attachments`, a shared `session_id` for each
+   conversation, and `turn_number` counting from 1.
 
 2. The `chat_turn` input has `prompt` and `history`. The output has only
    `output`, with no `new_messages`. For the first turn of a conversation
    `history` is empty. For later turns it holds the earlier turns' messages.
 
-3. For one of the  `search_docs` child spans beneath, you should see:
-
-- Input with only the `query`.
-- Output with `num_hits` and `doc_ids`.
-- Metadata with `matched_terms`.
-- No full document `body`.
+3. A `search_docs` child span has `query` in its input, `num_hits` and `doc_ids`
+   in its output, and `matched_terms` in metadata. Its output has no document
+   bodies.
 
 ![Custom search_docs span showing the trimmed query and result summary](assets/04-custom-search-docs-span.png)
 

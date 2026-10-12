@@ -21,13 +21,9 @@ email.
 
 ![Loop diagnoses recipient-mismatch failures](assets/05-loop-diagnoses-recipient-mismatch.png)
 
-Loop should identify that the model can send `draft_email` an email address it
-guessed before using the CRM lookup. Make the CRM account ID, rather than a
-free-form recipient address, the input to `draft_email`. That gives the
-application responsibility for selecting the recipient. The tool will resolve
-the account's verified primary-contact email from the CRM fixture, and the
-existing deterministic scorer will measure the same behavior on the same frozen
-dataset.
+Change `draft_email` to accept a CRM account ID and resolve the primary-contact
+email from the fixture. This makes recipient selection the application's
+responsibility. Keep the dataset and scorer unchanged to compare the results.
 
 Open **agent/tools.py**.
 
@@ -67,21 +63,16 @@ def draft_email(account_id: str, subject: str, body: str) -> dict:
     if account is None:
         return {"status": "error", "error": f"Unknown account {account_id!r}."}
 
-    contact = account.get("primary_contact") or {}
-    recipient = contact.get("email")
-    if not recipient:
-        return {
-            "status": "error",
-            "error": f"{account['id']} has no primary-contact email.",
-        }
+    recipient = account["primary_contact"]["email"]
 
     email = {"recipient": recipient, "subject": subject, "body": body}
     return {"status": "drafted", "email": email}
 ~~~
 
 Keep the existing `@traced(type="tool")` decorator, if your file already has
-one. The tool continues to log the drafted recipient, so the scorer needs no
-changes.
+one. Every account fixture has a primary-contact email, so the tool reads it
+directly after validating the account ID. It still logs the recipient for the
+existing scorer.
 
 ## Step 4: Run the fixed version on the same rows
 
@@ -104,8 +95,8 @@ instead of a model-supplied address. Inspect any remaining 0s: they indicate a
 missing lookup, an invalid account ID, or another behavior the narrow fix did
 not address.
 
-The dataset stays frozen throughout this comparison. That is what lets you
-attribute a score change to the code change, rather than to different examples.
+Using the same dataset keeps the cases comparable. Model variation can still
+affect individual results.
 
 ![Recipient-mismatch baseline and account-ID experiments compared](assets/05-recipient-mismatch-account-id-comparison.png)
 

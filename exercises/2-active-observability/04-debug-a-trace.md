@@ -12,8 +12,8 @@ recipient in the actual `draft_email` output before running the Debugger.
 
 Select the **Debugger** layout in the trace, then select **Run debugger**.
 
-The analysis runs on the trace. It can take a
-few minutes for a long trace, and you can navigate away while it runs.
+Analysis can take a few minutes for a long trace. You can navigate away while
+it runs.
 
 Once the report is created, read the summary and each proposed failure mode. For every finding, inspect:
 

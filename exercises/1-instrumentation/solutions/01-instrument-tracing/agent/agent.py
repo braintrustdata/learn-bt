@@ -1,5 +1,4 @@
-"""The Sales Assistant agent.
-"""
+"""The Sales Assistant agent."""
 
 from __future__ import annotations
 
@@ -32,11 +31,7 @@ class AgentError(RuntimeError):
 @lru_cache(maxsize=1)
 def get_client() -> OpenAI:
     if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
-        return wrap_openai(
-            OpenAI(
-                base_url=os.environ["BASE_URL"]
-            )
-        )
+        return wrap_openai(OpenAI(base_url=os.environ["BASE_URL"]))
 
     return wrap_openai(
         OpenAI(
@@ -57,10 +52,9 @@ class InputFile:
 
     @classmethod
     def from_path(cls, path: str | Path) -> InputFile:
-        """Read a file from the local filesystem."""
-        p = Path(path)
-        media_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
-        return cls(data=p.read_bytes(), media_type=media_type, filename=p.name)
+        path = Path(path)
+        media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        return cls(data=path.read_bytes(), media_type=media_type, filename=path.name)
 
     @classmethod
     def from_dataset_attachment(cls, attachment: Any) -> InputFile:
@@ -88,7 +82,6 @@ class AgentResult:
 
 
 def _user_message(prompt: str, attachments: list[InputFile]) -> dict[str, Any]:
-    """Build the user message, as plain text or as text plus attachment parts."""
     if not attachments:
         return {"role": "user", "content": prompt}
     return {

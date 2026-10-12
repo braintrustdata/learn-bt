@@ -10,10 +10,9 @@ available, its conversation history and attachment. It deliberately excludes
 the original tool calls, draft, and final answer. The eval runs the current agent
 again, so LLM planning and output can vary slightly from the recorded trace.
 
-Expect a low score because every source run was a known mismatch, but do not
-expect exactly 0%. The goal is to record an honest baseline for CRM-recipient
-matching before you fix the recipient-selection code. The fix exercise makes
-one code change and reruns this unchanged dataset.
+Record the recipient-matching score before changing the code. These cases
+were selected for failures, so the score may be low, but model variation means
+it need not be 0%.
 
 Open **evals/eval_agent.py**.
 
@@ -86,15 +85,11 @@ From the repository root, run the full dataset:
 bt eval evals/eval_agent.py --env-file .env
 ~~~
 
-The full experiment should score low because this dataset holds only known
-recipient mismatches. A rerun can occasionally use the correct CRM address even
-before the fix. Record the observed score as the baseline that you will compare
-with the fixed version.
+Record the observed score for comparison with the fixed version.
 
 If a row passes, inspect its new trace. It means the current model did not
 reproduce that recorded failure on this attempt. Keep the row in the frozen
-regression dataset. A single passing rerun does not erase the source failure or
-count as the fix.
+regression dataset. A passing rerun does not establish that the failure is fixed.
 
 ![Recipient-mismatch baseline experiment results](assets/04-recipient-mismatch-baseline-experiment.png)
 

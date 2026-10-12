@@ -48,6 +48,5 @@ Write down:
 2. Where customer email drafting appears in the distribution.
 3. One email conversation worth investigating, with its trace link and why.
 
-These observations describe how the assistant is used and identify conversations
-worth investigating. A usable customer follow-up needs both the right recipient
-and a complete, readable email.
+When reviewing these conversations, check both the recipient and whether the
+email is complete and readable.

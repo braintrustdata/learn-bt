@@ -1,21 +1,16 @@
 # 3.3 Create recipient and email-quality scorers
 
-The regression dataset records why each source turn failed. The eval must judge
-the new run, however, rather than repeat that stored label. The drafted recipient
-and the CRM primary-contact email both exist in the new trace, so this behavior
-needs a deterministic scorer, not an LLM judge.
-
-A deterministic scorer applies a fixed comparison to structured tool output and
-does not ask another model for a judgment. You could build an equivalent check in
-Loop, but this exercise shows how to define and version the scorer in code for
-reuse in evals.
+The eval should score each new run, using the draft recipient and CRM
+primary-contact email in its trace. A deterministic scorer compares these
+structured values without a model judgment. Define it in code so you can
+version it and reuse it in evals; Loop can also create an equivalent check.
 
 The agent's final response is not the email object. The scorer must inspect the
 trace, find the **lookup_customer** and **draft_email** tool spans, then compare
 their structured outputs.
 
-The recipient check covers one failure mode. We also want a picture of whether the generated emails are high quality, and useful to Account Executives that will interact with the agent. Add a second scorer, **email_quality**, to measure
-adherence to the quality guidelines for what makes a good email.
+Add an **email_quality** scorer to check whether the subject and body meet the
+communication guidelines used by account executives.
 
 Open **evals/scorers.py**.
 
@@ -40,10 +35,8 @@ def crm_primary_contact_emails(tool_spans):
         if span.span_attributes.get("name") != "lookup_customer":
             continue
 
-        accounts = span.output.get("accounts", [])
-        for account in accounts:
-            contact = account.get("primary_contact")
-            email = contact.get("email")
+        for account in span.output["accounts"]:
+            email = account["primary_contact"]["email"]
             if email:
                 emails.add(email.strip().casefold())
     return emails
@@ -65,7 +58,7 @@ async def recipient_matches_crm(trace=None):
     if not draft:
         return 0
 
-    recipient = draft.output.get("email").get("recipient")
+    recipient = draft.output["email"]["recipient"]
     expected_recipients = crm_primary_contact_emails(tool_spans)
     if not recipient or not expected_recipients:
         return 0
@@ -85,9 +78,6 @@ The helper collects every verified primary-contact email returned by a customer
 lookup. The scorer returns 1 only when the draft recipient matches one of those
 addresses. It returns 0 when the agent did not draft an email, did not retrieve
 a usable CRM address, or drafted to a different address.
-
-This fail-closed behavior makes missing retrieval visible. If the agent does not
-look up the customer, it cannot prove that a recipient is correct.
 
 The source row's `expected` values are audit evidence for the original failure.
 This scorer does not read them. It measures the recipient the agent drafts on
@@ -126,7 +116,7 @@ Guidelines:
 
 Choose one rating:
 P: Meets guidelines; ready to use without communication-style edits.
-F: Does not meet guidelines; would not be considered a high quality email by account executives.
+F: Needs communication-style edits to meet the guidelines.
 
 Subject: {{{subject}}}
 Body: {{{output}}}
@@ -181,7 +171,7 @@ bt functions push evals/scorers.py --env-file .env
 ~~~
 
 Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
-CRM** and **email_quality** appear. Open each and press "Run" on a sample
+CRM** and **email_quality** appear. Open each and select **Run** on a sample
 trace that contains a `draft_email` span.
 
 ![A successful Recipient matches CRM scorer test](assets/03-recipient-matches-crm-scorer-test.png)
@@ -197,8 +187,8 @@ For online scoring, use **Trace** scope and filter for traces containing
 `draft_email`. This handler uses the trace to locate the actual tool output;
 it does not need a conversation spread across multiple traces.
 
-On later edits of the scorers, run the same command with `--if-exists
-replace` to push new versions of the scorers.
+After editing a scorer, add `--if-exists replace` to the push command to
+publish a new version.
 
 ## Answer key
 
