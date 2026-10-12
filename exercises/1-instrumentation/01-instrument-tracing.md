@@ -98,7 +98,7 @@ the Braintrust import:
 from braintrust import start_span, wrap_openai
 ```
 
-Then wrap the body of `chat_turn()`, everything after its docstring, in a span.
+Then wrap the body of `chat_turn()` in a span.
 Indent the existing code one level under the `with` block:
 
 ```python

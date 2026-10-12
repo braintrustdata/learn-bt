@@ -22,8 +22,6 @@ Open **evals/eval_agent.py**.
 Below the path setup, add:
 
 ~~~python
-import uuid
-
 from braintrust import Eval, init_dataset
 
 from agent.agent import Agent, InputFile

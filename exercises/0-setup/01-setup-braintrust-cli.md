@@ -66,7 +66,7 @@ If the project already exists, create one with a different name. For example `le
 
 At this point, you should have all of the following:
 
-- A local `.venv` created by `uv sync`.
+- A local `.venv` created by `uv sync` and activated.
 - A private `.env` with a valid API key and org name.
 - A `learn-bt` project in your Braintrust org.
 
