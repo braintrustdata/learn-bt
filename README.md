@@ -29,6 +29,10 @@ main.py         A REPL for chatting with the agent.
 exercises/      The workshop exercises, grouped by section.
 ```
 
+Start with the [exercise sequence](exercises/README.md). The course follows one
+email-quality investigation from production traces to a regression dataset and
+measured improvements.
+
 ## Getting started
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).

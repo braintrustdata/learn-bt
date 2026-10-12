@@ -34,7 +34,10 @@ def task(input, hooks):
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
     return Agent(config).chat_turn(
-        input["prompt"], session_id=uuid.uuid4().hex, attachments=attachments
+        input["prompt"],
+        session_id=uuid.uuid4().hex,
+        attachments=attachments,
+        history=input.get("history"),
     ).output
 
 

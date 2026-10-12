@@ -5,7 +5,8 @@ details can make it harder for PMs and subject matter experts (SMEs) to inspect
 the part of a trace relevant to their review.
 
 Custom views present trace data in a UI built for a specific workflow. In this
-exercise, you will create a view that makes a drafted email easy to inspect.
+exercise, create a customer-email review view. You will use it again when the
+account-team expert confirms failures and reviews writing quality in Section 3.
 
 ## Step 1: Open a trace with a drafted email
 
@@ -18,8 +19,16 @@ preview the view.
 Enter into the prompt window:
 
 ~~~text
-Create a custom view for reviewing drafted customer emails. Show the original
-request and the output of the draft_email span as an email, with the email body, subject, and recipient. Only show this when there is an actual draft_email span in the trace. Provide a thumbs up/down feedback option that will can be used to provide feedback, which writes back to the draft_email span metadata.
+Create a custom view named Customer email review. Show it only when the trace
+contains a draft_email tool span. Show the current request from the chat_turn
+root, its conversation history, and previewable root input attachments when
+present. Render each draft_email output as an email with recipient, subject,
+and body. Show the CRM primary-contact name and email from lookup_customer next
+to the draft so a reviewer can check the recipient. Clearly mark missing CRM
+evidence. Use tool outputs for the draft, not the final assistant reply.
+Include thumbs up/down feedback that writes to the draft_email span metadata.
+Keep this quick feedback separate from the written human-review form we will
+configure later.
 ~~~
 
 Loop uses the current trace to identify the relevant fields and generate the

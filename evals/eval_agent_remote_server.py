@@ -3,7 +3,7 @@
 Load the saved parameters (parameters.py) and pass their values down through the
 `hooks` object to build an AgentConfig and run the agent. Start the dev server:
 
-    bt eval evals/eval_remote_agent.py --dev
+    bt eval evals/eval_agent_remote_server.py --dev
 
 The completed source is in
 exercises/3-evals/solutions/06-remote-eval-server/evals/eval_agent_remote_server.py.

@@ -1,6 +1,8 @@
 # 1.1 Instrument the agent with Braintrust tracing
 
-The agent in `agent/` has no tracing yet. You will add it in four small stages
+The team can see the Sales Assistant's replies, but cannot explain the model
+and tool decisions behind them. The agent in `agent/` has no tracing yet.
+You will add it in four small stages
 and seed traces after each one. This makes it clear what each change adds.
 
 `scripts.seed` is a traffic generator, not tracing code. For each run, it
@@ -108,6 +110,12 @@ with start_span(name="chat_turn", type="task") as span:
 One call to `chat_turn()` is now one `chat_turn` trace. The agent holds no
 conversation state, so a multi-turn conversation is a series of `chat_turn`
 traces. Each later turn receives the earlier messages as its `history` input.
+
+This course uses one trace per turn, with a shared session ID to connect turns.
+That makes each request independently inspectable and replayable. Another design
+is a session-level root span containing all turns; choose the boundary that
+matches your app's lifecycle. Here, keep the turn-level design so later datasets
+can replay a failed turn with its preceding context.
 
 ### Log the turn's request and reply
 
@@ -301,6 +309,13 @@ In a trace confirm each of the following:
 - No full document `body`.
 
 ![Custom search_docs span showing the trimmed query and result summary](assets/04-custom-search-docs-span.png)
+
+## Check the original request
+
+Run `uv run python main.py` and repeat the two requests from Exercise 0.2.
+Open their traces and answer the question you wrote down. Locate the CRM lookup
+and the actual draft tool output. In the next exercise, preserve attachments on
+the root input so those requests carry their full context into review and evals.
 
 ## Answer key
 

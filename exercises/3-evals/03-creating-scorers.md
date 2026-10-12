@@ -98,7 +98,8 @@ each new eval trace.
 Append the following to the same file. `LLMClassifier` maps a model's rating to
 a pass/fail score and includes an explanation with `use_cot=True`.
 
-The rubric is our workshop company communication policy: no placeholders,
+The rubric encodes the workshop communication criteria you used in human review:
+no placeholders,
 concise writing, and a professional but conversational tone. Keep it fixed
 while you tune the agent's drafting prompt so the scores remain comparable.
 
@@ -179,8 +180,10 @@ trace that contains a `draft_email` span.
 
 ![A successful Recipient matches CRM scorer test](assets/03-recipient-matches-crm-scorer-test.png)
 
-For **email_quality**, inspect the rating explanation alongside the actual
-email. Try a draft containing `[Your Name]` and confirm that the judge identifies
+For **email_quality**, run the writing examples you reviewed in Exercise 3.1.
+Compare the rating and explanation with your written assessment alongside the
+actual email. If they disagree, inspect the evidence before trusting the judge.
+Try a draft containing `[Your Name]` and confirm that the judge identifies
 the placeholder and scores it 0. Compare it with a concise, conversational draft
 with a complete subject and no placeholders.
 

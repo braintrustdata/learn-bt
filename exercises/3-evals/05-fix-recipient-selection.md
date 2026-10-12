@@ -109,35 +109,17 @@ attribute a score change to the code change, rather than to different examples.
 
 ![Recipient-mismatch baseline and account-ID experiments compared](assets/05-recipient-mismatch-account-id-comparison.png)
 
-## Step 5: Improve email quality with a prompt change
+## Next: Make configuration experiments accessible
 
-After recording the recipient fix, inspect drafts where **email_quality** scored
-0. Use the judge's explanations to identify recurring communication issues.
-For example, drafts in the source logs often end with `[Your Name]` or
-`[Your Company]`.
+You changed the agent's tool configuration in code and measured the result.
+Record the recipient and email-quality scores and inspect any remaining writing
+failures. The recipient fix does not address placeholders, length, or tone.
 
-In **agent/config.py**, add email-specific guidance to `SYSTEM_PROMPT`:
-
-~~~text
-When drafting customer emails:
-- Produce a complete subject and body with no placeholders or template text.
-  If sender details are unavailable, omit the sender signature.
-- Keep the body concise, aiming for 150 words or fewer. Use short paragraphs
-  and remove generic opening pleasantries and repetition.
-- Write in a professional, conversational tone: friendly, direct, and respectful.
-  Avoid stiff language, slang, excessive enthusiasm, and emojis.
-- Use a clear, specific subject.
-~~~
-
-Change the experiment name to `email-quality-prompt` and rerun the same dataset.
-Compare it with `recipient-mismatch-account-id`. Keep both scorers and the judge's
-rubric unchanged. Check whether **email_quality** improves, inspect the explanations
-for remaining failures, and confirm **Recipient matches CRM** still performs well.
-LLM judgments can vary; use the drafts and explanations to assess the change
-alongside the aggregate scores.
+In Exercise 3.6, expose selected configuration through a remote eval server so an
+account-team expert can participate in this same process. They will compare
+prompt variants against the existing dataset and scorers.
 
 ## Answer key
 
 Compare your completed [agent/tools.py](solutions/05-fix-recipient-selection/agent/tools.py)
-with this answer key for the recipient fix. Step 5 is a prompt-tuning exercise;
-adapt the prompt guidance to the failures you observe.
+with this answer key for the recipient fix.

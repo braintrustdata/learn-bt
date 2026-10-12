@@ -1,6 +1,10 @@
 # 2.1 Query logs with filters, SQL, and the CLI [UI + CLI]
 
-This exercise uses the traces you instrumented in Section 1. You will answer the same question with a Logs filter, SQL, and the CLI.
+The account team wants to understand customer follow-up work, including requests
+that arrive with a forwarded customer message. Use your instrumented traces to
+find that context and inspect the resulting drafts. First, simulate production
+volume. Then use filters and search to locate relevant requests, and SQL to
+export turns for a team investigation. Run the same export through the CLI.
 
 ## Step 1: Create enough traffic
 
@@ -77,6 +81,11 @@ investigate but did not record it as structured metadata.
 
 ![Searching a multi-turn trace for an opportunity ID in Braintrust Logs](assets/03-search-business-context.png)
 
+Before exporting, find a request that drafted a customer email. Open **Customer
+email review**, compare the request and draft, and save its trace link. You will
+investigate the broader usage distribution next, then look for recurring email
+failures with Loop.
+
 ## Step 4: Export one row per customer turn with SQL
 
 Open the **SQL sandbox**. Start with this query:
@@ -97,6 +106,11 @@ ORDER BY estimated_cost DESC
 Run it, then select **Download** to export a CSV. Each `chat_turn` trace holds
 one customer turn's request and response, so a row per trace is a row per
 customer turn.
+
+Inspect the most expensive turns and identify one customer-follow-up request.
+Open its trace to see which model and tool calls contributed to the cost, then
+use **Customer email review** to inspect the draft. Cost helps prioritize an
+investigation; it does not establish whether a draft is correct.
 
 If your input or output has a different shape, inspect one `chat_turn` span and
 adjust the fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.

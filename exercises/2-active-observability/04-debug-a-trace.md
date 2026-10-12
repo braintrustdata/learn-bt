@@ -6,7 +6,9 @@ outputs, then returns failure hypotheses with links to the source evidence.
 
 ## Step 1: Run the Debugger
 
-From **Logs**, open a trace that has a multi-action request.
+From **Logs**, open one of the recipient-mismatch traces you confirmed in
+Exercise 2.3. Note the requested customer, the CRM primary-contact email, and the
+recipient in the actual `draft_email` output before running the Debugger.
 
 Select the **Debugger** layout in the trace, then select **Run debugger**.
 
@@ -28,8 +30,11 @@ Select **Continue in Loop** from the report, then ask:
 
 ~~~text
 Find other traces with the same failure mode as this one. Show the common
-request pattern, the relevant tool or model behavior, and the trace links. Tell
-me whether this should become a pattern, a Topics classifier, or an eval case.
+request pattern, the relevant tool or model behavior, and the trace links. Identify
+which examples are suitable regression cases and which need human review.
 ~~~
 
-Compare the returned traces before deciding whether this may justify a pattern, a classifier, or an eval.
+Compare the returned evidence with your original finding. Record the supported
+failure, the suspected cause, and links to the relevant spans. A debugger report
+is a hypothesis until the evidence supports it. In Section 3, an account-team
+reviewer will confirm these drafts and help define what good behavior means.

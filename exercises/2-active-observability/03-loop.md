@@ -1,10 +1,14 @@
-# 2.2 Loop
+# 2.3 Discover recurring failures with Loop and Patterns
 
 Active observability applies AI to the traces you already collect. Start with a
 question in Loop, turn a supported recurring behavior into a Pattern, then
 inspect the Pattern's evidence in the trace itself.
 
-## Step 1 Use Loop to query something
+Topics showed the kinds of work AEs request. Now investigate whether the agent
+completes that work correctly. Bring the email trace and usage observations from
+Exercise 2.2, if Topics has finished processing.
+
+## Step 1: Discover candidate failures
 
 Open **learn-bt**, then select **Loop** in the project sidebar. Start a new
 thread and ask:
@@ -17,7 +21,7 @@ Loop investigates the project and returns an evidence-backed response.
 
 ![Loop groups findings from Sales Assistant logs into reported Patterns.](assets/02-loop-investigation-and-reported-patterns.png)
 
-## Step 2 Read a Pattern
+## Step 2: Read a Pattern
 
 When Loop identifies a recurring behavior, it reports a Pattern. A Pattern is a
 saved report, not a single trace. It summarizes the behavior, explains why it
@@ -36,7 +40,7 @@ traces.
 
 ![A Pattern report summarizes the behavior, suggests a fix, and links supporting traces.](assets/02-pattern-report.png)
 
-## Step 3 Inspect the evidence trace
+## Step 3: Inspect the evidence trace
 
 The Pattern report links to its evidence traces. Open one in the side panel and
 start with the `chat_turn` root, which is one customer turn. Compare the original request with the
@@ -53,3 +57,30 @@ the request.
 One trace can support more than one Pattern. In that case, the same trace has
 multiple Pattern spans. Read each one separately because they can describe
 different recurring behaviors in the same agent run.
+
+## Step 4: Focus on customer email drafting
+
+Continue the investigation with:
+
+~~~text
+Investigate customer email drafts in learn-bt. Find chat_turn traces with both
+lookup_customer and draft_email where the drafted recipient differs from the
+CRM primary_contact.email. Exclude internal-team or generic-mailbox drafts,
+explicitly requested alternate recipients, and ambiguous account lookups.
+Link the evidence and show the CRM email and drafted recipient for each case.
+Also identify recurring writing issues, such as unresolved placeholders.
+Distinguish confirmed evidence from hypotheses. Do not create a dataset yet.
+~~~
+
+Inspect the cited tool outputs yourself. Save links to confirmed mismatches and
+at least one draft that needs writing edits. If fresh traffic contains no
+mismatches, replay the included snapshot using Exercise 2.1's replay command,
+then repeat the investigation. Do not label a correct draft as a failure to
+complete the exercise.
+
+For a team operating this assistant, revisiting the investigation daily would
+help identify new failures. Patterns retain findings and evidence for review;
+this exercise uses a one-time investigation and does not configure a schedule.
+
+Choose one confirmed email failure for the Debugger in Exercise 2.4. Keep the
+other source links for human review and dataset curation in Section 3.

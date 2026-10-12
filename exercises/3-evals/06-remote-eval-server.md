@@ -1,14 +1,15 @@
 # 3.6 Set up a remote eval server
 
-A remote eval server lets domain experts tune an agent and run evals from a
-Braintrust playground without touching the code. Developers choose which parts
-of the agent configuration to expose as parameters, while the agent and scorer
-logic run in a controlled environment.
+You improved recipient selection by changing the agent's tool configuration in
+code. Running those experiments has required a developer. A remote eval server
+makes the same process accessible to domain experts: developers expose selected
+configuration, and reviewers run the actual agent from a Braintrust playground
+with the existing dataset and scorers.
 
-Any configurable part of the agent can become a parameter, as long as it's a valid Pydantic schema. In this exercise,
-you will expose the Sales Assistant's prompt, model, and turn count. The same
-pattern can support tool settings, retrieval options, thresholds, or other
-configuration that can influence agent quality.
+In this exercise, expose the system prompt, model, and maximum tool-call count.
+Then take the role of an account-team expert and compare prompt variants that
+address the email-writing failures from human review and the baseline. The agent
+and scorer logic remain in your repository.
 
 ## Step 1: Create the saved parameters
 
@@ -99,7 +100,10 @@ def task(input, hooks):
         attachments.append(InputFile.from_dataset_attachment(attachment))
 
     return Agent(config).chat_turn(
-        input["prompt"], session_id=uuid.uuid4().hex, attachments=attachments
+        input["prompt"],
+        session_id=uuid.uuid4().hex,
+        attachments=attachments,
+        history=input.get("history"),
     ).output
 
 
@@ -115,7 +119,8 @@ Eval(
 The playground sends parameter values through `hooks.parameters`. The task acts
 as an adapter: it converts those values to the app's `AgentConfig`, runs the
 agent, and returns its output. The agent and scorer logic remain versioned in
-the repository.
+the repository. Keep history and attachments, just as in the local eval: a
+follow-up request needs its earlier conversation context to remain replayable.
 
 Notice that data is left blank. That's because the dataset will be selected from the playground directly. Any additional scorers selected in the playground will run in addition to those defined here in the server code.
 
@@ -135,11 +140,61 @@ http://localhost:8300
 ~~~
 
 Test the connection and save the source. Open a playground, select the remote
-eval source, choose a dataset, and run it. If all is configured properly, you should see the eval results populate in the playground.
+eval source, and choose **crm-recipient-mismatches**. Keep the dataset and both
+scorers unchanged throughout the following comparison.
 
-Duplicate the remote eval task in the playground, change one of the parameters and run an eval again. Both experiments will execute side by side with the different parameter sets. How did that change affect quality?
+## Step 4: Run the current configuration
 
-Congratulations! You just implemented a full flywheel for improving an agent's quality!
+Use the saved parameter defaults, which reflect the current application config.
+Run the dataset and label this variant **Current configuration**. Inspect its
+recipient and email-quality results. Compare them with the local experiment
+from Exercise 3.5; model and judge variation can cause some differences.
+
+## Step 5: Compare an email-writing prompt variant
+
+Duplicate the task in the playground and label the copy **Email quality
+candidate**. Keep the model and tool-call limit the same so this experiment
+changes only the system prompt.
+
+Read the email-quality failures and their explanations, alongside the human
+reviews from Exercise 3.1. Add guidance to the candidate's system prompt that
+addresses the recurring issue. For example:
+
+~~~text
+When drafting customer emails:
+- Produce a complete subject and body with no placeholders or template text.
+  If sender details are unavailable, omit the sender signature.
+- Keep the body concise, aiming for 150 words or fewer. Use short paragraphs
+  and remove generic opening pleasantries and repetition.
+- Write in a professional, conversational tone: friendly, direct, and respectful.
+  Avoid stiff language, slang, excessive enthusiasm, and emojis.
+- Use a clear, specific subject.
+~~~
+
+Run both variants and compare them side by side. Keep the judge's rubric fixed.
+Check whether **email_quality** improves, read the actual drafts and explanations,
+and confirm **Recipient matches CRM** remains strong. If the candidate does not
+improve the drafts, revise it based on the evidence and compare again. Record
+which configuration you would choose and why. A domain expert can now conduct
+this experiment without modifying Python files.
+
+## Step 6: Apply the chosen configuration
+
+If the candidate improves the drafts without reducing recipient correctness,
+copy its complete system prompt into `SYSTEM_PROMPT` in **agent/config.py**.
+Otherwise, keep the current configuration and record the unresolved issue.
+Playground parameter edits do not automatically update the application.
+
+Set the local eval's experiment name to `email-quality-selected-config` and run:
+
+~~~bash
+bt eval evals/eval_agent.py --env-file .env
+~~~
+
+Verify that the application configuration produces the behavior you selected.
+This dataset contains known recipient failures, so the results establish
+performance on those cases. You now have a repeatable path from production
+traces to reviewed failures, regression tests, and measured configuration changes.
 
 ## Answer key
 
