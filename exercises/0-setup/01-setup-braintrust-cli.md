@@ -28,14 +28,20 @@ space.
 
 ```dotenv
 BRAINTRUST_API_KEY=your-api-key
-BRAINTRUST_ORG_NAME="your-org-name"
 BASE_URL=https://gateway.braintrust.dev
+BRAINTRUST_ORG_NAME="your-org-name"
 ```
 
 `BRAINTRUST_API_KEY` authenticates both the SDK and the CLI. The SDK uses it to
-write traces, datasets, and evals. `BRAINTRUST_ORG_NAME` is sent to the
-Braintrust Gateway when the app makes a model call. Keep `.env` private. Do
-not put a real key in `example.env` or commit `.env`.
+write traces, datasets, and evals. `BRAINTRUST_ORG_NAME` selects the target
+organization for Gateway calls and must exactly match the org that owns your
+API key. Keep `.env` private. Do not put a real key in `example.env` or commit
+`.env`.
+
+If your shell already exports `BRAINTRUST_API_KEY`, it takes precedence over
+the value in `.env`. Remove that global export or run
+`unset BRAINTRUST_API_KEY` before using this workshop, so the key in `.env`
+selects the intended org.
 
 ## Step 3: Confirm that the CLI can reach your org
 

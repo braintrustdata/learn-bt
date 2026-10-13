@@ -30,10 +30,11 @@ def get_client() -> OpenAI:
     if os.environ.get("DISABLE_BRAINTRUST_GATEWAY"):
         return OpenAI(base_url=os.environ["BASE_URL"])
 
+    org_name = os.environ.get("BRAINTRUST_ORG_NAME")
     return OpenAI(
         base_url=os.environ["BASE_URL"],
         api_key=os.environ["BRAINTRUST_API_KEY"],
-        default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
+        default_headers={"x-bt-org-name": org_name} if org_name else {},
     )
 
 
