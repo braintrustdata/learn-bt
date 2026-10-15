@@ -9,16 +9,19 @@ customer emailed you), stage it first with:
 
     /attach path/to/file.pdf
 
-The file is attached to your next message and then cleared. Type /exit to quit.
+The file is attached to your next message and then cleared. Each message continues
+the same conversation. Type /exit to quit.
 
 Requires BRAINTRUST_API_KEY in your environment (a .env file is loaded if
 present). Model calls route through the Braintrust gateway, unless
 DISABLE_BRAINTRUST_GATEWAY is set, in which case they go to the OpenAI provider directly
 """
 
+import uuid
+
 from dotenv import load_dotenv
 
-from agent.agent import run_agent
+from agent.agent import Agent
 
 load_dotenv()
 
@@ -28,6 +31,9 @@ BANNER = """Sales Assistant (type /exit to quit, /attach <path> to attach a file
 
 def main() -> None:
     print(BANNER)
+    agent = Agent()
+    history = None
+    session_id = uuid.uuid4().hex
     pending_attachments: list[str] = []
 
     while True:
@@ -47,7 +53,13 @@ def main() -> None:
             print(f"(attached {path}; it will be sent with your next message)")
             continue
 
-        result = run_agent(line, attachments=pending_attachments or None)
+        result = agent.chat_turn(
+            line,
+            session_id=session_id,
+            attachments=pending_attachments or None,
+            history=history,
+        )
+        history = [*(history or []), *result.new_messages]
         pending_attachments = []
 
         print(f"\nassistant> {result.output}\n")

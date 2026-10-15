@@ -1,8 +1,4 @@
-"""Tools for the Sales Assistant agent.
-
-Read tools query the fixtures. Write tools (``draft_email``, ``update_crm_record``)
-are mocks.
-"""
+"""Sales Assistant tools. Reads use fixtures; drafts and CRM writes are mocked."""
 
 from __future__ import annotations
 
@@ -21,13 +17,12 @@ class LookupCustomer(BaseModel):
 
 
 def lookup_customer(query: str) -> dict:
-    """Look up a customer account in the CRM by account id or by company name. Returns account details including the primary contact, tier, renewal date,
-    and ARR.
+    """Look up a CRM account by ID or company name.
+
+    Returns the primary contact, tier, renewal date, and ARR.
     """
     matches = fixtures.find_accounts(query)
-    if not matches:
-        return {"found": False, "query": query, "accounts": []}
-    return {"found": True, "query": query, "accounts": matches}
+    return {"found": bool(matches), "query": query, "accounts": matches}
 
 
 class GetOpportunity(BaseModel):
@@ -35,8 +30,7 @@ class GetOpportunity(BaseModel):
 
 
 def get_opportunity(opportunity_id: str) -> dict:
-    """Get the details of a sales opportunity by its id. Returns its stage, amount, close date, and next step.
-    """
+    """Get an opportunity by ID, including stage, amount, close date, and next step."""
     opp = fixtures.OPPORTUNITIES.get(opportunity_id.strip().upper())
     if opp is None:
         return {"found": False, "opportunity_id": opportunity_id}
@@ -48,8 +42,9 @@ class SearchKnowledgeBase(BaseModel):
 
 
 def search_knowledge_base(query: str) -> dict:
-    """Search the internal knowledge base for pricing, security, onboarding, and
-    competitive positioning information. Use this before making factual claims about the product.
+    """Search pricing, security, onboarding, and competitive positioning docs.
+
+    Use this before making factual claims about the product.
     """
     hits = fixtures.search_docs(query)
     return {
@@ -67,8 +62,7 @@ class DraftEmail(BaseModel):
 
 
 def draft_email(recipient: str, subject: str, body: str) -> dict:
-    """Draft an email to a customer contact. Returns the drafted email for review; it is not sent automatically.
-    """
+    """Return a customer email draft for review without sending it."""
     email = {"recipient": recipient, "subject": subject, "body": body}
     return {"status": "drafted", "email": email}
 
@@ -85,7 +79,6 @@ def update_crm_record(record_id: str, field: str, value: str) -> dict:
     return {"status": "updated", "record": result}
 
 
-#Tool registry used to generate tool specs
 TOOLS: dict[str, tuple[type[BaseModel], Callable[..., dict]]] = {
     "lookup_customer": (LookupCustomer, lookup_customer),
     "get_opportunity": (GetOpportunity, get_opportunity),
@@ -104,7 +97,7 @@ def tool_specs() -> list[ChatCompletionFunctionToolParam]:
 
 
 def dispatch(name: str, arguments: str) -> dict:
-    """Run the named tool against a JSON string of arguments from the model."""
+    """Validate model-supplied JSON arguments and run the tool."""
     entry = TOOLS.get(name)
     if entry is None:
         return {"error": f"Unknown tool {name!r}. Available tools: {sorted(TOOLS)}."}

@@ -9,8 +9,11 @@ Requires BRAINTRUST_API_KEY (a .env file is loaded if present).
 from __future__ import annotations
 
 import argparse
+import copy
 import os
+import secrets
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any
@@ -59,6 +62,36 @@ def _span_start(span: dict[str, Any]) -> float:
     return (span.get("metrics") or {}).get("start", 0.0)
 
 
+def _with_fresh_ids(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Give a replay new log, span, and trace identities.
+
+    A project can retain a delete tombstone for a previously inserted log ID.
+    Reusing snapshot IDs after clearing a project can therefore make a replay
+    appear to succeed before the deleted records disappear again. New IDs make
+    each replay an independent set of production traces.
+    """
+
+    log_ids = {span["id"]: str(uuid.uuid4()) for span in spans}
+    root_span_ids = {span["root_span_id"]: secrets.token_hex(16) for span in spans}
+    span_ids = {span["span_id"]: secrets.token_hex(8) for span in spans}
+
+    replayed: list[dict[str, Any]] = []
+    for span in spans:
+        event = copy.deepcopy(span)
+        event["id"] = log_ids[span["id"]]
+        event["root_span_id"] = root_span_ids[span["root_span_id"]]
+        event["span_id"] = span_ids[span["span_id"]]
+        if "span_parents" in event:
+            # A recorded remote scorer can have a parent outside the exported
+            # trace. Keep that external reference unchanged.
+            event["span_parents"] = [
+                span_ids.get(parent, parent) for parent in event["span_parents"]
+            ]
+        replayed.append(event)
+
+    return replayed
+
+
 def _prepare_span(
     span: dict[str, Any],
     shift: float,
@@ -102,7 +135,7 @@ def main() -> None:
         raise SystemExit("BRAINTRUST_API_KEY is not set.")
 
     recorded = snapshot_module.load()
-    spans = recorded.spans
+    spans = _with_fresh_ids(recorded.spans)
     traces = len({span["root_span_id"] for span in spans})
     print(f"Loaded {len(spans)} recorded spans across {traces} traces.")
 
