@@ -11,7 +11,7 @@ add tracing, human review, regression evals, and a remote eval server.
 | 0 | `0-setup` | Configure the environment and meet the agent |
 | 1 | `1-instrumentation` | Add tracing and a custom view to the agent |
 | 2 | `2-active-observability` | Inspect production traffic with search, SQL, Topics, Loop, and Debugger |
-| 3 | `3-evals` | Human review, one regression dataset, scorers, baselines, fixes, and remote iteration |
+| 3 | `3-evals` | One regression dataset, scorers, human review, baselines, fixes, and remote iteration |
 
 Exercises that require source changes include completed files in a
 `solutions/` folder.

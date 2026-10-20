@@ -5,8 +5,8 @@ details can make it harder for PMs and subject matter experts (SMEs) to inspect
 the part of a trace relevant to their review.
 
 Custom views present trace data in a UI built for a specific workflow. In this
-exercise, create a customer-email review view that an account-team expert can
-use to confirm recipient failures and assess writing quality.
+exercise, create an email view that an account-team expert can
+use to conduct human review.
 
 ## Step 1: Open a trace with a drafted email
 
@@ -15,7 +15,7 @@ Loop uses this trace to build and preview the view.
 
 ## Step 2: Ask Loop to create the view
 
-Enter into the prompt window:
+Enter the following in the prompt window:
 
 ~~~text
 Create a custom view named Customer email review. Show it only when the trace

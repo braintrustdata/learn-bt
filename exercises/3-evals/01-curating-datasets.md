@@ -1,13 +1,10 @@
-# 3.2 Build a recipient-mismatch regression dataset
+# 3.1 Build a recipient-mismatch regression dataset
 
-Start with traces of customer email drafts whose recipient did not match the
-CRM primary contact. Confirm the failures against the AE request and tool
-evidence, using human reviews when available. Turn proven examples into a
-dataset named **crm-recipient-mismatches**.
+We'll create a focused regression dataset that contains traces of customer email drafts whose recipient did not match the
+CRM primary contact.
 
-This is a focused regression dataset. It contains only known recipient failures,
-not a representative sample of all Sales Assistant traffic. Measure how often the current agent reproduces these failures, then fix the
-implementation and rerun the same dataset.
+We'll measure how often the current agent reproduces these failures, then fix the
+implementation and see if that measurement improves.
 
 ## Step 1: Create the failure dataset with Loop
 
@@ -31,9 +28,6 @@ Open **Datasets**, then **crm-recipient-mismatches**. Confirm that it contains
 only recipient-mismatch failures. Each row must have `input.prompt`, and it must
 preserve conversation history and the source attachment when the original turn
 had them.
-
-Compare the source traces with any recorded human reviews. Check that the cases Loop selected are supported by the trace evidence. Remove a row
-if its source does not satisfy the recipient policy.
 
 Open several rows and verify that `expected.crm_primary_contact_email` differs
 from `expected.source_draft_recipient`. Keep this dataset unchanged while you

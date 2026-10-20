@@ -2,7 +2,7 @@
 
 You improved recipient selection by changing the agent's tool configuration in
 code. Running those experiments has required a developer. A remote eval server
-makes the same process accessible to domain experts: developers expose selected
+makes the same process accessible to domain experts. Developers expose selected
 configuration, and reviewers run the actual agent from a Braintrust playground
 with the existing dataset and scorers.
 
@@ -49,7 +49,7 @@ project.parameters.create(
 )
 ~~~
 
-The prompt parameter renders editable prompt and model controls.
+The prompt parameter renders controls for editing the prompt and model.
 `MaxToolCallsParam` exposes the runtime limit without exposing the rest of the agent
 configuration.
 

@@ -1,18 +1,10 @@
 # 3.4 Establish the recipient-mismatch baseline
 
-Run the current Sales Assistant against **crm-recipient-mismatches**. Every row
-was selected because the recorded run drafted to the wrong customer email. The
-deterministic scorer measures whether the current agent still makes that mistake
-when it receives the same turn input.
-
-Each dataset row preserves the original input, including its prompt and, when
-available, its conversation history and attachment. It deliberately excludes
-the original tool calls, draft, and final answer. The eval runs the current agent
-again, so LLM planning and output can vary slightly from the recorded trace.
-
-Record the recipient-matching score before changing the code. These cases
-were selected for failures, so the score may be low, but model variation means
-it need not be 0%.
+In Module 2, we used active observability to identify recurring issues,
+including emails sent to the wrong recipient. Now we turn those confirmed
+failures into a fixed test set and measure how reliably the current agent
+selects the CRM email when it reruns the same requests. This establishes a
+baseline that we can compare against after making the fix.
 
 Open **evals/eval_agent.py**.
 
@@ -49,11 +41,12 @@ def task(input):
     ).output
 ~~~
 
-A dataset attachment is hydrated before the task runs. The agent holds only
-configuration, so each row supplies its own conversation context. The preserved
-`input.history` recreates the messages that preceded the failed turn when it
-was part of a multi-turn conversation. The prior draft is not replayed. The agent must
-produce a new one.
+Before an eval row runs, its saved attachment is restored. Each row also passes
+the agent the original request and, when needed, `input.history`, which contains
+the messages from earlier in the conversation. This gives the agent the context
+it had before the failed turn. It does not reuse the email from the original
+trace. Instead, it runs again and produces a new draft for the scorer to
+evaluate.
 
 ## Step 3: Define the eval
 
@@ -69,13 +62,13 @@ Eval(
 )
 ~~~
 
-The scorer evaluates the new run trace. A score of 1 means the new draft
-recipient matches a primary-contact email returned in its own CRM lookup.
+The `recipient_matches_crm` scorer reads the trace from this new eval run, not
+the original trace. It returns **1** when the new draft uses a primary-contact
+email from that run's CRM lookup. Otherwise, it returns **0**.
 
-The experiment also records **email_quality** for the same new draft. Inspect
-its explanations for placeholders, excessive length, or tone issues. This dataset
-was selected for recipient failures, so its email-quality score is a baseline
-for these cases, not a measure of all email traffic.
+The experiment also runs the **email_quality** scorer on the same new draft. Its
+explanations can flag writing issues such as placeholders, excessive length, or
+tone.
 
 ## Step 4: Run the baseline
 
@@ -85,11 +78,18 @@ From the repository root, run the full dataset:
 bt eval evals/eval_agent.py --env-file .env
 ~~~
 
-Record the observed score for comparison with the fixed version.
+When the run finishes, open **Experiments** in Braintrust and select
+**recipient-mismatch-baseline**. An experiment is a saved record of one eval
+run. It keeps the dataset rows, new agent outputs, traces, and scorer results
+together so you can inspect and compare them later.
 
-If a row passes, inspect its new trace. It means the current model did not
-reproduce that recorded failure on this attempt. Keep the row in the frozen
-regression dataset. A passing rerun does not establish that the failure is fixed.
+Find the **recipient_matches_crm** score column and look at its average. Every
+row was selected from a prior recipient mismatch, and we have not changed the
+agent yet, so the score should be low, often close to **0** (or 0%). Some rows may pass
+on a particular rerun because model outputs can vary. Open a passing row's new
+trace to understand why, but keep every row in the frozen regression dataset.
+Use this recorded baseline score to compare the fixed version in the next
+exercise.
 
 ![Recipient-mismatch baseline experiment results](assets/04-recipient-mismatch-baseline-experiment.png)
 

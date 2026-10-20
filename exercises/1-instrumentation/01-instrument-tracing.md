@@ -1,12 +1,12 @@
 # 1.1 Instrument the agent with Braintrust tracing
 
-The team can see the Sales Assistant's replies, but cannot explain the model
-and tool decisions behind them. The agent in `agent/` has no tracing yet.
-Add tracing in four stages, generating traffic after each to inspect the
+Right now, you can see the Sales Assistant's replies, but you cannot explain the model
+and tool decisions behind them. This is because your agent has no tracing yet.
+We'll add tracing in four stages, and generate traffic after each step to inspect the
 result.
 
-`scripts.seed` generates traffic. For each run, it
-selects an account or opportunity fixture, asks an LLM to write a realistic
+To generate traffic, we'll use `scripts.seed`. For each run, it
+selects an account, asks an LLM to write an
 account-executive request, and passes that request to `Agent.chat_turn()`.
 
 ## Step 1: Log model spans
@@ -86,8 +86,7 @@ previewable PDF or image attachment. The attachment represents forwarded custome
 ## Step 3: Add trace structure
 
 The wrapped client records model calls, but it does not know which model calls,
-tools, and helper functions belong to one customer turn. Add spans to create
-that hierarchy.
+tools, and helper functions belong to one customer turn, so we'll create that hierarchy.
 
 ### Make `chat_turn()` the root span
 
@@ -113,9 +112,10 @@ traces. Each later turn receives the earlier messages as its `history` input.
 
 This course uses one trace per turn, with a shared session ID to connect turns.
 That makes each request independently inspectable and replayable. Another design
-is a session-level root span containing all turns; choose the boundary that
-matches your app's lifecycle. Here, keep the turn-level design so later datasets
-can replay a failed turn with its preceding context.
+is a session-level root span containing all turns.
+
+Here, we'll keep the turn-level design so later datasets
+can replay one failed turn in an isolated way.
 
 ### Log the turn's request and reply
 
@@ -295,7 +295,7 @@ Open a trace and confirm:
 
 2. The `chat_turn` input has `prompt` and `history`. The output has only
    `output`, with no `new_messages`. For the first turn of a conversation
-   `history` is empty. For later turns it holds the earlier turns' messages.
+   `history` is empty. For later turns, it holds the earlier turns' messages.
 
 3. A `search_docs` child span has `query` in its input, `num_hits` and `doc_ids`
    in its output, and `matched_terms` in metadata. Its output has no document
@@ -305,10 +305,20 @@ Open a trace and confirm:
 
 ## Check the original request
 
-Run `uv run python main.py`, ask it to look up ACC-1001, then ask for a concise
-follow-up email to the CRM primary contact. Open the traces and locate the CRM
-lookup and actual draft tool output. Check whether the execution evidence
-explains behavior that the final reply alone could not.
+Run `uv run python main.py`, ask it:
+
+```text
+Look up ACC-1001 and summarize what I should know before my next customer call.
+```
+
+and then ask it:
+
+```text
+Please draft a concise follow-up email to their CRM primary contact.
+```
+
+Open the traces in Braintrust. You should see two logs that capture the two
+conversation turns.
 
 ## Answer key
 

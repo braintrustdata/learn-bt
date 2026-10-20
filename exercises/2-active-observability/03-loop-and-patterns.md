@@ -1,12 +1,10 @@
 # 2.3 Discover recurring failures with Loop and Patterns
 
-Active observability applies AI to the traces you already collect. Start with a
-question in Loop, turn a supported recurring behavior into a Pattern, then
-inspect the Pattern's evidence in the trace itself.
-
 Use instrumented Sales Assistant traffic to investigate whether the agent
-completes AE requests correctly. If Topics classifications are available, use
-the task distribution to inform the investigation.
+completes AE requests correctly.
+
+Start with a question in Loop, turn a supported recurring behavior into a Pattern, then
+inspect the Pattern's evidence in the trace itself.
 
 ## Step 1: Discover candidate failures
 
@@ -17,7 +15,7 @@ thread and ask:
 Review the current Sales Assistant logs. Identify up to three recurring behaviors or possible failure modes. For each one, link the supporting traces, explain the evidence, and say whether it is worth tracking.
 ~~~
 
-Inspect the trace links in Loop's response.
+Inspect the trace links in Loop's response. Loop's response will also create and link to Patterns, which we'll explain in the next step.
 
 ![Loop groups findings from Sales Assistant logs into reported Patterns.](assets/02-loop-investigation-and-reported-patterns.png)
 
@@ -33,9 +31,7 @@ project. Open one and read its report. Check:
 - **Evidence** for the traces and spans that support the finding.
 - **Suggested fix** for the smallest useful next action.
 
-Treat a Pattern as a starting point for investigation. Before you act on it,
-confirm that the cited evidence represents the same behavior across several
-traces.
+Treat a Pattern as a starting point for investigation.
 
 ![A Pattern report summarizes the behavior, suggests a fix, and links supporting traces.](assets/02-pattern-report.png)
 
@@ -47,9 +43,7 @@ final response, then expand the model and tool spans to see how the agent
 produced that outcome.
 
 The trace also includes a Pattern span. Select it to see the Pattern attached to
-that trace and the evidence relationship. This span records an observability
-finding. It does not represent work that the Sales Assistant performed during
-the request.
+that trace and the evidence relationship.
 
 ![A Pattern evidence span connects the trace to its reported Pattern.](assets/02-pattern-evidence-span.png)
 
@@ -70,15 +64,17 @@ Also identify recurring writing issues, such as unresolved placeholders.
 Distinguish confirmed evidence from hypotheses. Do not create a dataset yet.
 ~~~
 
-Inspect the cited tool outputs yourself. Save links to confirmed mismatches and
-at least one draft that needs writing edits. If fresh traffic contains no
-mismatches, replay the included snapshot with
-`uv run --env-file .env python -m scripts.seed_default --project learn-bt`,
-then repeat the investigation. Do not label a correct draft as a failure to
-complete the exercise.
+Inspect the cited tool outputs yourself. Patterns retain findings and evidence
+for later review. You can run Pattern discovery or a separate Loop
+investigation automatically on a daily, weekly, interval, or custom schedule.
+An automation can also send its results to Slack, PagerDuty, or a webhook, so
+the team can review new findings where it already works.
 
-Patterns retain findings and evidence for later review. Repeating this
-investigation daily could help a team identify new failures.
+## If you need more sample traffic
 
-Record the confirmed failures, their source links, and the evidence supporting
-each finding.
+If fresh traffic you generated contains no email mismatches, replay the included
+snapshot, which contains recipient mismatches, then repeat the investigation:
+
+~~~bash
+uv run --env-file .env python -m scripts.seed_default --project learn-bt
+~~~

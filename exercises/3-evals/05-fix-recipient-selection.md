@@ -1,7 +1,7 @@
 # 3.5 Fix recipient selection and rerun the regression dataset
 
 The baseline shows that some email drafts do not use the CRM primary-contact
-email. First, use Loop to inspect those failures and identify the cause. Then
+email. First, we'll use Loop to inspect those failures and identify the cause. Then we'll
 turn the recommended fix into a code change and rerun the same frozen dataset.
 
 ## Step 1: Ask Loop to explain the failures
@@ -14,20 +14,21 @@ Look at the traces in recipient-mismatch-baseline where Recipient matches CRM sc
 What is causing the failures?
 ~~~
 
-Use Loop's evidence to identify the recurring recipient-selection problem and
-its recommended code-level fix. You should find that the agent can give
-`draft_email` a plausible but guessed address instead of the CRM primary-contact
-email.
+Use Loop's evidence to identify the recurring problem and
+its recommended code-level fix.
 
 ![Loop diagnoses recipient-mismatch failures](assets/05-loop-diagnoses-recipient-mismatch.png)
 
-Change `draft_email` to accept a CRM account ID and resolve the primary-contact
-email from the fixture. This makes recipient selection the application's
-responsibility. Keep the dataset and scorer unchanged to compare the results.
+## Step 2: Require a CRM account ID when drafting
+
+Loop found that the model was choosing plausible-looking recipient addresses
+instead of using the verified email returned by the CRM lookup. To fix that,
+we'll change `draft_email` to accept a CRM account ID and resolve the
+primary-contact email from the fixture. The application, rather than the model,
+will select the recipient. Keep the dataset and scorer unchanged so you can
+compare the results.
 
 Open **agent/tools.py**.
-
-## Step 2: Require a CRM account ID when drafting
 
 Replace the `DraftEmail` model with:
 
@@ -44,9 +45,12 @@ class DraftEmail(BaseModel):
     body: str = Field(description="The body of the email.")
 ~~~
 
-The model can no longer provide a guessed recipient to the email tool. The
-description also tells it to call `lookup_customer` first and reuse the account
-ID from that result.
+Previously, the model could pass any email address it generated to
+`draft_email`. The new tool schema removes the recipient field entirely. To
+draft an email, the model must first call `lookup_customer`, then pass that
+tool's account ID to `draft_email`. The email tool uses the account ID to fetch
+the verified primary-contact email itself, so a guessed address never becomes
+the draft recipient.
 
 ## Step 3: Resolve the recipient inside the tool
 
@@ -69,10 +73,12 @@ def draft_email(account_id: str, subject: str, body: str) -> dict:
     return {"status": "drafted", "email": email}
 ~~~
 
-Keep the existing `@traced(type="tool")` decorator, if your file already has
-one. Every account fixture has a primary-contact email, so the tool reads it
-directly after validating the account ID. It still logs the recipient for the
-existing scorer.
+The fix is inside `draft_email()`. Now the tool accepts only
+an account ID, checks that the account exists in the CRM fixture, and then reads
+that account's primary-contact email. For a valid account ID, the tool cannot
+use a model-generated address because it never receives one. The tool result
+still includes the recipient, so the existing scorer can compare it with the
+CRM lookup result.
 
 ## Step 4: Run the fixed version on the same rows
 
@@ -91,19 +97,14 @@ bt eval evals/eval_agent.py --env-file .env
 Open **Experiments** and compare `recipient-mismatch-account-id` with
 `recipient-mismatch-baseline`. The fixed experiment should score substantially
 higher because `draft_email` now uses the CRM's verified primary-contact email
-instead of a model-supplied address. Inspect any remaining 0s: they indicate a
+instead of a model-supplied address. Inspect any rows with 0% scores because they might indicate a
 missing lookup, an invalid account ID, or another behavior the narrow fix did
 not address.
 
-Using the same dataset keeps the cases comparable. Model variation can still
-affect individual results.
+Remember that using the same dataset keeps the cases comparable, but model
+variation can still affect individual results.
 
 ![Recipient-mismatch baseline and account-ID experiments compared](assets/05-recipient-mismatch-account-id-comparison.png)
-
-## Record the comparison
-
-Record the recipient and email-quality scores and inspect any remaining writing
-failures. The recipient fix does not address placeholders, length, or tone.
 
 ## Answer key
 
