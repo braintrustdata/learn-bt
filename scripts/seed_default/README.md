@@ -16,7 +16,7 @@ three turns. Each customer turn is its own trace, and later turns of a
 conversation carry the earlier turns' messages in `input.history`, so replayed traces have
 the same structure as freshly seeded ones.
 
-Two things, though, are rewritten:
+Three things, though, are rewritten:
 
 - **Timestamps.** Every span is shifted by one constant offset that lands the
   newest recorded span at the present moment, so the logs are fresh while
@@ -35,7 +35,8 @@ snapshot.
 
 `fetch.py` rebuilds `snapshot/` from a live project. Run it when the agent
 changes enough that the recorded traces no longer look like what attendees
-would produce. It records the most recent 50 sessions by default, with every `chat_turn` trace of each.
+would produce. By default, it records the most recent 50 sessions and every
+`chat_turn` trace in each session.
 
 ```bash
 uv run python -m scripts.seed --count 100 --concurrency 10

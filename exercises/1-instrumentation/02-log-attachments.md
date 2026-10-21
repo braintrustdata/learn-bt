@@ -19,7 +19,8 @@ reference in the span input.
 ## Step 2: Replace the root-span log call
 
 `chat_turn()` already converts every file path or dataset attachment into an
-`InputFile` in `input_files`. Replace the `span.log(...)` call that logs the input in `chat_turn()` with this:
+`InputFile` in `input_files`. Replace the `span.log(...)` call that logs the
+input in `chat_turn()` with the following:
 
 ```python
 span.log(

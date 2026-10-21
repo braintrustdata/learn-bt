@@ -235,10 +235,11 @@ def main() -> None:
             base_url=os.environ["BASE_URL"]
         )
     else:
+        org_name = os.environ.get("BRAINTRUST_ORG_NAME")
         client = OpenAI(
             base_url=os.environ["BASE_URL"],
             api_key=os.environ["BRAINTRUST_API_KEY"],
-            default_headers={"x-bt-org-name": os.environ.get("BRAINTRUST_ORG_NAME", "")},
+            default_headers={"x-bt-org-name": org_name} if org_name else {},
         )
 
     # Choose every conversation up front, then run them.

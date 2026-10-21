@@ -1,20 +1,14 @@
-# 3.3 Create recipient and email-quality scorers
+# 3.2 Create recipient and email-quality scorers
 
-The eval should score each new run, using the draft recipient and CRM
-primary-contact email in its trace. A deterministic scorer compares these
-structured values without a model judgment. Define it in code so you can
-version it and reuse it in evals; Loop can also create an equivalent check.
-
-The agent's final response is not the email object. The scorer must inspect the
-trace, find the **lookup_customer** and **draft_email** tool spans, then compare
-their structured outputs.
-
-Add an **email_quality** scorer to check whether the subject and body meet the
-communication guidelines used by account executives.
+The eval should score each new run, so we'll create one deterministic scorer and
+one LLM-as-a-judge scorer to measure two different facets of the response.
 
 Open **evals/scorers.py**.
 
 ## Step 1: Replace the scorer scaffold
+
+First, we'll create a deterministic scorer that checks whether the email passed
+to `draft_email` matches the primary-contact email returned by the CRM lookup.
 
 Replace the entire file with:
 
@@ -74,7 +68,7 @@ project.scorers.create(
 )
 ~~~
 
-The helper collects every verified primary-contact email returned by a customer
+In this code, we collect every primary-contact email returned by a customer
 lookup. The scorer returns 1 only when the draft recipient matches one of those
 addresses. It returns 0 when the agent did not draft an email, did not retrieve
 a usable CRM address, or drafted to a different address.
@@ -85,13 +79,10 @@ each new eval trace.
 
 ## Step 2: Add the email-quality LLM judge
 
-Append the following to the same file. `LLMClassifier` maps a model's rating to
-a pass/fail score and includes an explanation with `use_cot=True`.
+Next, we'll create an LLM-as-a-judge scorer that measures the quality of the
+written draft itself.
 
-The rubric defines the workshop communication criteria for human and automated review:
-no placeholders,
-concise writing, and a professional but conversational tone. Keep it fixed
-while you tune the agent's drafting prompt so the scores remain comparable.
+Append the following to the same file.
 
 ~~~python
 from autoevals import LLMClassifier
@@ -153,12 +144,11 @@ project.scorers.create(
 )
 ~~~
 
-The handler reads the email object from the new run's `draft_email` output,
-then passes its subject and body to the judge. It does not grade the agent's
-final chat response, which may merely say that an email was drafted.
+The rubric defines the workshop communication criteria for human and automated review: no placeholders, concise writing, and a professional but conversational tone.
 
-A score of **1** means the email meets the guidelines; **0** means it needs
-communication-style edits.
+A score of **1** means the email meets the guidelines and **0** means it doesn't meet all the guidelines.
+
+`LLMClassifier` maps a model's rating to a pass/fail score and includes an explanation with `use_cot=True`.
 
 ## Step 3: Push and inspect both scorers
 
@@ -176,21 +166,7 @@ trace that contains a `draft_email` span.
 
 ![A successful Recipient matches CRM scorer test](assets/03-recipient-matches-crm-scorer-test.png)
 
-For **email_quality**, run writing examples with recorded human assessments.
-Compare the rating and explanation with your written assessment alongside the
-actual email. If they disagree, inspect the evidence before trusting the judge.
-Try a draft containing `[Your Name]` and confirm that the judge identifies
-the placeholder and scores it 0. Compare it with a concise, conversational draft
-with a complete subject and no placeholders.
-
-For online scoring, use **Trace** scope and filter for traces containing
-`draft_email`. This handler uses the trace to locate the actual tool output;
-it does not need a conversation spread across multiple traces.
-
-After editing a scorer, add `--if-exists replace` to the push command to
-publish a new version.
-
 ## Answer key
 
-Compare your completed [evals/scorers.py](solutions/03-creating-scorers/evals/scorers.py)
+Compare your completed [evals/scorers.py](solutions/02-creating-scorers/evals/scorers.py)
 with this answer key.

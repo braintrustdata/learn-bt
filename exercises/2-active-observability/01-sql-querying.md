@@ -1,10 +1,8 @@
 # 2.1 Query logs with filters, SQL, and the CLI [UI + CLI]
 
 The account team wants to understand customer follow-up work, including requests
-that arrive with a forwarded customer message. Use your instrumented traces to
-find that context and inspect the resulting drafts. First, simulate production
-volume. Then use filters and search to locate relevant requests, and SQL to
-export turns for a team investigation. Run the same export through the CLI.
+that arrive with a forwarded customer message. Learn to use filters and search to locate relevant requests, and SQL to
+export turns for a team investigation.
 
 ## Step 1: Create enough traffic
 
@@ -62,25 +60,16 @@ Its root input should contain the logged attachment. The root's
 
 ## Step 3: Search for one business context
 
-In the Logs search box, enter an opportunity ID or name:
+In the Logs search box, enter an opportunity ID:
 
 ~~~text
 OPP-5001
-~~~
-
-Or:
-
-~~~text
-Northwind EU expansion
 ~~~
 
 Open a matching `chat_turn` trace and read the request in its input. Search is useful when you know the situation you want to
 investigate but did not record it as structured metadata.
 
 ![Searching a multi-turn trace for an opportunity ID in Braintrust Logs](assets/03-search-business-context.png)
-
-Before exporting, find a request that drafted a customer email. Open **Customer
-email review**, compare the request and draft, and save its trace link as evidence for the team investigation.
 
 ## Step 4: Export one row per customer turn with SQL
 
@@ -102,9 +91,7 @@ ORDER BY estimated_cost DESC
 Run it, then select **Download** to export a CSV. Each row contains one customer turn's request and response.
 
 Inspect the most expensive turns and identify one customer-follow-up request.
-Open its trace to see which model and tool calls contributed to the cost, then
-use **Customer email review** to inspect the draft. Cost helps prioritize an
-investigation; it does not establish whether a draft is correct.
+Open its trace to see which model and tool calls contributed to the cost.
 
 If your input or output has a different shape, inspect one `chat_turn` span and
 adjust the fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.
@@ -118,9 +105,6 @@ From the repository root, run:
 ~~~bash
 bt sql --force-ignore-linter "SELECT created, input.prompt AS request, output.output AS response, metrics.tokens AS tokens, metrics.estimated_cost AS estimated_cost FROM project_logs('learn-bt') WHERE name = 'chat_turn' AND created >= NOW() - INTERVAL 7 DAY ORDER BY estimated_cost DESC" --env-file .env
 ~~~
-
-The CLI reports a sort-planning warning for this query. The explicit flag runs
-the workshop query despite that warning.
 
 Compare the terminal result with your CSV. Both should show one row per
 customer turn in the same cost order. The UI is useful for exploration. The
