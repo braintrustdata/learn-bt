@@ -6,19 +6,24 @@ makes the same process accessible to domain experts. Developers expose selected
 configuration, and reviewers run the actual agent from a Braintrust playground
 with the existing dataset and scorers.
 
-In this exercise, expose the system prompt, model, and maximum tool-call count.
-Then take the role of an account-team expert and compare prompt variants that
-address the email-writing failures from human review and the baseline. The agent
-and scorer logic remain in your repository.
+For our agent, the system prompt messages, model, and max tool call count are the tunable config, so in this exercise we will expose those as parameters.
 
-## Step 1: Create the saved parameters
+## Step 1: Define the parameters inline
 
-Saved parameters define the controls that a reviewer can change from the
-playground. Open `evals/parameters.py`, remove the unused `create_model` import,
-and replace the commented-out template with:
+Parameters define the controls that a reviewer can change from the playground. Any valid Pydantic schema can be exposed as a parameter. Additionally, there are two special parameter types: `prompt` and `model`, which render special UI for configuring those. The `prompt` parameter also includes a model picker.
+Open **evals/eval_agent_remote_server.py**. Add these imports and definitions
+below the path setup:
 
 ~~~python
-project = braintrust.projects.create(name="learn-bt")
+import uuid
+
+from braintrust import Eval, init_function
+from pydantic import BaseModel, Field
+
+from agent.agent import Agent, InputFile
+from agent.config import AgentConfig, DEFAULT_CONFIG
+
+PROJECT = "learn-bt"
 
 
 class MaxToolCallsParam(BaseModel):
@@ -28,57 +33,29 @@ class MaxToolCallsParam(BaseModel):
     )
 
 
-project.parameters.create(
-    name="Sales Assistant Parameters",
-    slug="sales-assistant-parameters",
-    description="Tunable configuration for the Sales Assistant agent.",
-    schema={
-        "main": {
-            "type": "prompt",
-            "description": "Agent's main prompt",
-            "default": {
-                "prompt": {
-                    "type": "chat",
-                    "messages": DEFAULT_CONFIG.system_prompt_messages,
-                },
-                "options": {"model": DEFAULT_CONFIG.model},
+parameters = {
+    "main": {
+        "type": "prompt",
+        "description": "Agent's main prompt",
+        "default": {
+            "prompt": {
+                "type": "chat",
+                "messages": DEFAULT_CONFIG.system_prompt_messages,
             },
+            "options": {"model": DEFAULT_CONFIG.model},
         },
-        "max_tool_calls": MaxToolCallsParam,
     },
-)
+    "max_tool_calls": MaxToolCallsParam,
+}
 ~~~
 
 The prompt parameter renders controls for editing the prompt and model.
-`MaxToolCallsParam` exposes the runtime limit without exposing the rest of the agent
-configuration.
-
-Push from inside `evals`:
-
-~~~bash
-cd evals
-bt functions push parameters.py --env-file ../.env
-~~~
-
-In Braintrust, confirm that the prompt, model, and maximum-tool-calls controls are visible in the **Parameters** tab.
+`MaxToolCallsParam` exposes the runtime limit for tool allowed tool calls, and is defined as a simple Pydantic type. Pass this definition to `Eval(parameters=...)`. See the
+[remote eval docs](https://www.braintrust.dev/docs/evaluate/remote-evals) for further reading.
 
 ## Step 2: Write the remote eval task
 
-Open **evals/eval_agent_remote_server.py**. Add these imports below the path setup:
-
-~~~python
-import uuid
-
-from braintrust import Eval, init_function, load_parameters
-
-from agent.agent import Agent, InputFile
-from agent.config import AgentConfig
-
-PROJECT = "learn-bt"
-saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
-~~~
-
-Replace the commented-out task and eval template with:
+Next we will wire up the remote eval server. The code here is nearly identical to that of `eval_agent.py` with the addition of exposing the parameters and ingesting them in the task.
 
 ~~~python
 recipient_matches_crm = init_function(PROJECT, "recipient-matches-crm")
@@ -129,16 +106,13 @@ Eval(
     data=[],
     task=task,
     scores=[recipient_matches_crm, email_quality],  # type: ignore
-    parameters=saved_parameters,
+    parameters=parameters,
 )
 ~~~
 
-The task converts `hooks.parameters` from the playground into `AgentConfig`,
-runs the agent, and returns its output. Preserve history and attachments so
-follow-up requests retain their context.
+The task converts `hooks.parameters` from the playground into an `AgentConfig` definition and runs our agent with this config. This allows for iterating on these parameters from the Braintrust UI by domain experts, and executing the eval remotely on our server with the updated parameters.
 
-Leave `data=[]` because you will select the dataset in the playground.
-Scorers selected there run alongside those defined in the server.
+`data=[]` is ignored for a remote eval because it will be selected from the playground. Scorers selected there run alongside those defined in the server.
 
 ## Step 3: Start and register the server
 
@@ -155,26 +129,14 @@ Braintrust, open **Settings**, then **Remote Evals**. Add a source with:
 http://localhost:8300
 ~~~
 
-Test the connection and save the source. Open a playground, select the remote
-eval source, and choose **crm-recipient-mismatches**. Keep the dataset and both
-scorers unchanged throughout the following comparison.
+Ensure the connection works and save the source. Open a playground, select the remote eval source, and choose **crm-recipient-mismatches** as the dataset. The initially loaded config parameters will be the defaults defined in our config code.
 
-## Step 4: Run the current configuration
+## Step 4: Compare an email-writing prompt variant
 
-Use the saved parameter defaults, which reflect the current application config.
-Run the dataset and label this variant **Current configuration**. Inspect its
-recipient and email-quality results. Compare them with the local experiment
-for the current configuration; model and judge variation can cause some differences.
+Duplicate the task in the playground to run a side by side comparison. Keep the model and tool-call limit the same so this experiment
+changes only the prompt.
 
-## Step 5: Compare an email-writing prompt variant
-
-Duplicate the task in the playground and label the copy **Email quality
-candidate**. Keep the model and tool-call limit the same so this experiment
-changes only the system prompt.
-
-Read the email-quality failures and their explanations, alongside the human
-reviews recorded on the source traces. Add guidance to the candidate's system prompt that
-addresses the recurring issue. For example:
+Read the email-quality failures and their explanations. Add guidance to the candidate's system prompt that addresses the recurring issue. You can use Loop to iterate on the prompt here. Example addition to the prompt:
 
 ~~~text
 When drafting customer emails:
@@ -194,26 +156,14 @@ improve the drafts, revise it based on the evidence and compare again. Record
 which configuration you would choose and why. A domain expert can now conduct
 this experiment without modifying Python files.
 
-## Step 6: Apply the chosen configuration
+## Step 5: Apply the chosen configuration
 
 If the candidate improves the drafts without reducing recipient correctness,
 copy its complete system prompt into `SYSTEM_PROMPT` in **agent/config.py**.
-Otherwise, keep the current configuration and record the unresolved issue.
-Playground parameter edits do not automatically update the application.
-
-Set the local eval's experiment name to `email-quality-selected-config` and run:
-
-~~~bash
-bt eval evals/eval_agent.py --env-file .env
-~~~
-
-Verify that the application configuration produces the behavior you selected.
-This dataset contains known recipient failures, so the results establish
-performance on those cases.
+Otherwise, try iterating further using Loop.
 
 ## Answer key
 
-Compare your completed source files with these answer keys:
-
-- [`evals/parameters.py`](solutions/06-remote-eval-server/evals/parameters.py)
-- [`evals/eval_agent_remote_server.py`](solutions/06-remote-eval-server/evals/eval_agent_remote_server.py)
+Compare your completed
+[evals/eval_agent_remote_server.py](solutions/06-remote-eval-server/evals/eval_agent_remote_server.py)
+with this answer key.
