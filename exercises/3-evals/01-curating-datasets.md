@@ -15,9 +15,9 @@ Create a dataset named crm-recipient-mismatches from the current Sales Assistant
 
 Find every customer-facing chat_turn that contains both lookup_customer and draft_email. Include a row only when the drafted email recipient differs from the primary_contact.email returned by lookup_customer in that same chat_turn. Exclude internal-team and generic-mailbox drafts, user-supplied alternate recipients, ambiguous customer lookups, and runs without a usable lookup or draft.
 
-Create one row per failed chat_turn. Preserve the original turn rather than rewriting it: store its exact request as input.prompt, its recorded history as input.history when present, and its attachment reference as input.attachment when present. Store the original CRM primary-contact email and the mismatched draft recipient in expected. Store the source trace ID, source chat_turn span ID, category crm-recipient-mismatch, and label provenance trace-derived in metadata. Do not put the prior draft, tool result, or final response into input because the eval must generate those again.
+Create one row per failed chat_turn. Store the initial request as input.prompt, its recorded history as input.history when present, and its attachment reference as input.attachment when present. Store the correct primary contact email returned from the `lookup_customer` tool to expected.recipient. Store the source trace ID, source chat_turn span ID, category crm-recipient-mismatch, and label provenance trace-derived in metadata.
 
-Link every source trace, report the number of rows created, and state any failures you excluded because the recorded input could not be replayed.
+Return to me every source trace, report the number of rows created, and state any failures you excluded because the recorded input could not be replayed.
 ~~~
 
 ![Recipient-mismatch regression dataset in Braintrust](assets/02-recipient-mismatch-dataset.png)
@@ -29,6 +29,7 @@ only recipient-mismatch failures. Each row must have `input.prompt`, and it must
 preserve conversation history and the source attachment when the original turn
 had them.
 
-Open several rows and verify that `expected.crm_primary_contact_email` differs
-from `expected.source_draft_recipient`. Keep this dataset unchanged while you
+Open several rows and verify that `expected.recipient` matches the source
+lookup's primary-contact email and differs from the source draft's recipient.
+Keep this dataset unchanged while you
 make the fix. The frozen inputs make the before-and-after experiments comparable.

@@ -69,11 +69,10 @@ Open **evals/eval_agent_remote_server.py**. Add these imports below the path set
 ~~~python
 import uuid
 
-from braintrust import Eval, load_parameters
+from braintrust import Eval, init_function, load_parameters
 
 from agent.agent import Agent, InputFile
 from agent.config import AgentConfig
-from scorers import email_quality, recipient_matches_crm
 
 PROJECT = "learn-bt"
 saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
@@ -82,6 +81,24 @@ saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parame
 Replace the commented-out task and eval template with:
 
 ~~~python
+recipient_matches_crm = init_function(PROJECT, "recipient-matches-crm")
+email_quality_scorer = init_function(PROJECT, "email-quality")
+
+
+async def email_quality(trace, **kwargs):
+    tool_spans = await trace.get_spans(span_type=["tool"])
+    draft = next(
+        (
+            span for span in tool_spans
+            if span.span_attributes["name"] == "draft_email"
+        ),
+        None,
+    )
+    if not draft:
+        return None
+
+    return email_quality_scorer(output=draft.output["email"])
+
 def task(input, hooks):
     prompt_param = hooks.parameters["main"]
     system_prompt_messages = [
