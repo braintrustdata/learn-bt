@@ -76,9 +76,7 @@ def draft_email(account_id: str, subject: str, body: str) -> dict:
 The fix is inside `draft_email()`. Now the tool accepts only
 an account ID, checks that the account exists in the CRM fixture, and then reads
 that account's primary-contact email. For a valid account ID, the tool cannot
-use a model-generated address because it never receives one. The tool result
-still includes the recipient, so the existing scorer can compare it with the
-CRM lookup result.
+use a model-generated address.
 
 ## Step 4: Run the fixed version on the same rows
 

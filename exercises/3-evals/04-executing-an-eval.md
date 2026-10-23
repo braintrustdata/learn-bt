@@ -13,10 +13,9 @@ Open **evals/eval_agent.py**.
 Below the path setup, add:
 
 ~~~python
-from braintrust import Eval, init_dataset
+from braintrust import Eval, init_dataset, init_function
 
 from agent.agent import Agent, InputFile
-from scorers import email_quality, recipient_matches_crm
 
 PROJECT = "learn-bt"
 DATASET = "crm-recipient-mismatches"
@@ -48,7 +47,37 @@ it had before the failed turn. It does not reuse the email from the original
 trace. Instead, it runs again and produces a new draft for the scorer to
 evaluate.
 
-## Step 3: Define the eval
+## Step 3: Load the saved scorers
+
+Import the scorer functions and the a span filtering wrapper above `task`:
+
+~~~python
+recipient_matches_crm = init_function(PROJECT, "recipient-matches-crm")
+email_quality_scorer = init_function(PROJECT, "email-quality")
+
+
+async def email_quality(trace, **kwargs):
+    tool_spans = await trace.get_spans(span_type=["tool"])
+    draft = next(
+        (
+            span for span in tool_spans
+            if span.span_attributes["name"] == "draft_email"
+        ),
+        None,
+    )
+    if not draft:
+        return None
+
+    return email_quality_scorer(output=draft.output["email"])
+~~~
+
+`init_function()` invokes the scorers pushed in exercise 3.2. The recipient
+scorer reads the new run's trace directly. The email-quality wrapper selects
+that run's `draft_email` span and passes the drafted email as `output` to the
+saved judge. See the
+[SDK reference](https://www.braintrust.dev/docs/sdks/python/api-reference#init_function).
+
+## Step 4: Define the eval
 
 Replace the commented-out **Eval** template with:
 
@@ -63,14 +92,14 @@ Eval(
 ~~~
 
 The `recipient_matches_crm` scorer reads the trace from this new eval run, not
-the original trace. It returns **1** when the new draft uses a primary-contact
-email from that run's CRM lookup. Otherwise, it returns **0**.
+the original trace. It returns **1** when the new draft's recipient matches
+`expected.recipient` from the dataset. Otherwise, it returns **0**.
 
 The experiment also runs the **email_quality** scorer on the same new draft. Its
 explanations can flag writing issues such as placeholders, excessive length, or
 tone.
 
-## Step 4: Run the baseline
+## Step 5: Run the baseline
 
 From the repository root, run the full dataset:
 

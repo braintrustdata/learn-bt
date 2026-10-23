@@ -4,16 +4,57 @@ import sys
 import uuid
 from pathlib import Path
 
-from braintrust import Eval, load_parameters
+from braintrust import Eval, init_function
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent.agent import Agent, InputFile
-from agent.config import AgentConfig
-from scorers import email_quality, recipient_matches_crm
+from agent.config import AgentConfig, DEFAULT_CONFIG
 
 PROJECT = "learn-bt"
-saved_parameters = load_parameters(project=PROJECT, slug="sales-assistant-parameters")
+
+
+class MaxToolCallsParam(BaseModel):
+    value: int = Field(
+        default=DEFAULT_CONFIG.max_tool_calls,
+        description="The most tool calls the agent may make to answer one customer message.",
+    )
+
+
+parameters = {
+    "main": {
+        "type": "prompt",
+        "description": "Agent's main prompt",
+        "default": {
+            "prompt": {
+                "type": "chat",
+                "messages": DEFAULT_CONFIG.system_prompt_messages,
+            },
+            "options": {"model": DEFAULT_CONFIG.model},
+        },
+    },
+    "max_tool_calls": MaxToolCallsParam,
+}
+
+
+recipient_matches_crm = init_function(PROJECT, "recipient-matches-crm")
+email_quality_scorer = init_function(PROJECT, "email-quality")
+
+
+async def email_quality(trace, **kwargs):
+    tool_spans = await trace.get_spans(span_type=["tool"])
+    draft = next(
+        (
+            span for span in tool_spans
+            if span.span_attributes["name"] == "draft_email"
+        ),
+        None,
+    )
+    if not draft:
+        return None
+
+    return email_quality_scorer(output=draft.output["email"])
 
 
 def task(input, hooks):
@@ -46,5 +87,5 @@ Eval(
     data=[],
     task=task,
     scores=[recipient_matches_crm, email_quality],  # type: ignore
-    parameters=saved_parameters,
+    parameters=parameters,
 )
