@@ -94,7 +94,7 @@ Inspect the most expensive turns and identify one customer-follow-up request.
 Open its trace to see which model and tool calls contributed to the cost.
 
 If your input or output has a different shape, inspect one `chat_turn` span and
-adjust the fields. The [SQL reference](https://www.braintrust.dev/docs/reference/sql) lists the available columns and functions.
+adjust the fields. The [SQL reference](https://docs.braintrust.dev/reference/sql) lists the available columns and functions.
 
 ![SQL sandbox query exporting one row per customer turn](assets/04-export-root-runs-sql.png)
 
