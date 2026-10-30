@@ -75,7 +75,7 @@ async def email_quality(trace, **kwargs):
 scorer reads the new run's trace directly. The email-quality wrapper selects
 that run's `draft_email` span and passes the drafted email as `output` to the
 saved judge. See the
-[SDK reference](https://www.braintrust.dev/docs/sdks/python/api-reference#init_function).
+[SDK reference](https://docs.braintrust.dev/sdks/python/api-reference#init_function).
 
 ## Step 4: Define the eval
 

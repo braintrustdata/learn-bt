@@ -16,7 +16,7 @@ the seeded or replayed traffic is included.
 Each `chat_turn` remains its own trace. The shared session ID lets Topics analyze
 the full conversation, so a follow-up such as "draft the email" is interpreted
 with the account context from earlier turns. See the
-[Topics grouping instructions](https://www.braintrust.dev/docs/observe/topics/manage#group-traces-into-conversations)
+[Topics grouping instructions](https://docs.braintrust.dev/observe/topics/manage#group-traces-into-conversations)
 for the grouping controls.
 
 Topics runs in the background and uses your organization's Topics credits. Processing all the traces may take some time.

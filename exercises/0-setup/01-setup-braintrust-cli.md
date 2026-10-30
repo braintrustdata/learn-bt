@@ -46,7 +46,7 @@ selects the intended org.
 ## Step 3: Confirm that the CLI can reach your org
 
 Install the `bt` CLI if it is not already available. The
-[CLI quickstart](https://www.braintrust.dev/docs/reference/cli/quickstart)
+[CLI quickstart](https://docs.braintrust.dev/reference/cli/quickstart)
 has the installation command for your platform.
 
 Then run this from the repository root:

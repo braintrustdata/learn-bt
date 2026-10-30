@@ -51,7 +51,7 @@ parameters = {
 
 The prompt parameter renders controls for editing the prompt and model.
 `MaxToolCallsParam` exposes the runtime limit for tool allowed tool calls, and is defined as a simple Pydantic type. Pass this definition to `Eval(parameters=...)`. See the
-[remote eval docs](https://www.braintrust.dev/docs/evaluate/remote-evals) for further reading.
+[remote eval docs](https://docs.braintrust.dev/evaluate/remote-evals) for further reading.
 
 ## Step 2: Write the remote eval task
 
