@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 from typing import Callable
 
+from braintrust import traced
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 from pydantic import BaseModel, Field, ValidationError
@@ -16,6 +17,7 @@ class LookupCustomer(BaseModel):
     query: str = Field(description="An account id, such as ACC-1001, or a company name.")
 
 
+@traced(type="tool")
 def lookup_customer(query: str) -> dict:
     """Look up a CRM account by ID or company name.
 
@@ -29,6 +31,7 @@ class GetOpportunity(BaseModel):
     opportunity_id: str = Field(description="An opportunity id, such as OPP-5001.")
 
 
+@traced(type="tool")
 def get_opportunity(opportunity_id: str) -> dict:
     """Get an opportunity by ID, including stage, amount, close date, and next step."""
     opp = fixtures.OPPORTUNITIES.get(opportunity_id.strip().upper())
@@ -41,6 +44,7 @@ class SearchKnowledgeBase(BaseModel):
     query: str = Field(description="The search terms to look for.")
 
 
+@traced(type="tool")
 def search_knowledge_base(query: str) -> dict:
     """Search pricing, security, onboarding, and competitive positioning docs.
 
@@ -56,13 +60,30 @@ def search_knowledge_base(query: str) -> dict:
 
 
 class DraftEmail(BaseModel):
-    recipient: str = Field(description="The email address of the customer contact.")
+    account_id: str = Field(
+        description=(
+            "The customer account ID returned by lookup_customer, such as "
+            "ACC-1001. Call lookup_customer first. The email is always "
+            "addressed to this account's verified CRM primary contact."
+        )
+    )
     subject: str = Field(description="The subject line.")
     body: str = Field(description="The body of the email.")
 
 
-def draft_email(recipient: str, subject: str, body: str) -> dict:
-    """Return a customer email draft for review without sending it."""
+@traced(type="tool")
+def draft_email(account_id: str, subject: str, body: str) -> dict:
+    """Draft an email to an account's verified CRM primary contact.
+
+    Call lookup_customer first and pass the returned account ID. The draft is
+    returned for review; it is not sent automatically.
+    """
+    account = fixtures.ACCOUNTS.get(account_id.strip().upper())
+    if account is None:
+        return {"status": "error", "error": f"Unknown account {account_id!r}."}
+
+    recipient = account["primary_contact"]["email"]
+
     email = {"recipient": recipient, "subject": subject, "body": body}
     return {"status": "drafted", "email": email}
 
@@ -73,6 +94,7 @@ class UpdateCrmRecord(BaseModel):
     value: str = Field(description="The new value for the field.")
 
 
+@traced(type="tool")
 def update_crm_record(record_id: str, field: str, value: str) -> dict:
     """Update a field on a CRM account or opportunity record. Mocked."""
     result = {"record_id": record_id, "field": field, "value": value}
