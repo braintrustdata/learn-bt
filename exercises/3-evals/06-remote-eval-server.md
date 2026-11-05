@@ -115,22 +115,54 @@ The task converts `hooks.parameters` from the playground into an `AgentConfig` d
 
 `data=[]` is ignored for a remote eval because it will be selected from the playground. Scorers selected there run alongside those defined in the server.
 
-## Step 3: Start and register the server
+## Step 3: Deploy and register the server on Modal
 
-From the repository root, run:
+We will run the server in a [Modal Sandbox](https://modal.com/docs/guide/sandboxes)
+so reviewers can use it without keeping your laptop running. You need a Modal
+account and a configured `.env` at the repository root with `BRAINTRUST_API_KEY`
+and `BASE_URL`. These should point to the Braintrust organization where you
+created the `learn-bt` project and scorers in the earlier exercises.
+
+From the repository root, authenticate with Modal:
 
 ~~~bash
-bt eval evals/eval_agent_remote_server.py --dev --env-file .env
+uv run modal setup
 ~~~
 
-This command starts the eval server on your machine. Leave it running. In
-Braintrust, open **Settings**, then **Remote Evals**. Add a source with:
+Create a Modal Secret from your `.env`. The server receives these environment
+variables at runtime:
 
-~~~text
-http://localhost:8300
+~~~bash
+uv run modal secret create learn-bt-remote-eval --from-dotenv .env
 ~~~
 
-Ensure the connection works and save the source. Open a playground, select the remote eval source, and choose **crm-recipient-mismatches** as the dataset. The initially loaded config parameters will be the defaults defined in our config code.
+If you use direct OpenAI access, include `OPENAI_API_KEY`,
+`DISABLE_BRAINTRUST_GATEWAY=1`, and the OpenAI `BASE_URL` in `.env` before creating
+the secret. Include `BRAINTRUST_ORG_NAME` if your gateway routing requires it.
+If the secret already exists, edit it in the Modal dashboard to update its values.
+
+Start the sandbox:
+
+~~~bash
+uv run python modal/modal_remote_eval.py
+~~~
+
+The [launcher](../../modal/modal_remote_eval.py) defines the Python environment,
+installs the dependencies from `uv.lock`, and bundles your saved local agent
+and remote eval code. It starts the server with `bt eval --dev` and exposes
+port 8300 through a Modal HTTPS tunnel. Wait for it to print **Remote Eval URL**.
+
+In Braintrust, open **Settings**, then **Remote Evals**, and add a source using
+that HTTPS URL. Ensure the connection works and save the source.
+
+Open a playground, select the remote eval source, and choose
+**crm-recipient-mismatches** as the dataset. The initially loaded config
+parameters will be the defaults defined in our config code.
+
+The sandbox runs independently after the launcher exits and expires after one
+hour. Use the termination command printed by the launcher or the Modal dashboard to
+stop it early. Each launch creates a new sandbox and URL; after changing Python
+code, launch again and update the registered source URL.
 
 ## Step 4: Compare an email-writing prompt variant
 

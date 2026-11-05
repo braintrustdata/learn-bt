@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "braintrust[cli]==0.48.0",
+    "modal>=1.6.3",
     "openai==3.36.1",
     "pillow>=12.3.0",
     "pydantic>=2.0",
