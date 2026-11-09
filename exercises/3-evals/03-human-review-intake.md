@@ -25,7 +25,7 @@ needs to change. The metadata path stores that explanation at
 
 ## Step 2: Limit it to drafted emails
 
-In the scorer visibility settings, add:
+In the scorer visibility settings, add as a span filter:
 
 ~~~sql
 span_attributes.name = "draft_email"

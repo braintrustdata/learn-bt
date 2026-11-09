@@ -110,11 +110,11 @@ The saved judge maps a model's rating to a pass/fail score and includes an expla
 ## Step 3: Push and inspect both scorers
 
 From the repository root, confirm that the CLI context points to your workshop
-org and **learn-bt**, then push the scorers:
+org and **learn-bt**, then push the scorers. If you are not using the default API url (`api.braintrust.dev`), you must specify the commented out `app-url` flag via `functions push`. See below:
 
 ~~~bash
 bt status
-bt functions push evals/scorers.py --env-file .env
+bt functions push evals/scorers.py --env-file .env #--app-url "https://<your-custom-api-url>"
 ~~~
 
 Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
