@@ -1,7 +1,9 @@
+import os
+
 import braintrust
 from pydantic import BaseModel
 
-project = braintrust.projects.create(name="learn-bt")
+project = braintrust.projects.create(name=os.getenv("BRAINTRUST_PROJECT_NAME"))
 
 
 class EmailScoreParams(BaseModel):

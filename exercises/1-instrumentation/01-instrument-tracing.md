@@ -23,10 +23,10 @@ Then initialize a logger immediately after `load_dotenv()`:
 
 ```python
 load_dotenv()
-braintrust.init_logger(project="learn-bt")
+braintrust.init_logger(project=os.getenv("BRAINTRUST_PROJECT_NAME"))
 ```
 
-The API key in `.env` selects your org. `project="learn-bt"` selects the
+The API key in `.env` selects your org. `BRAINTRUST_PROJECT_NAME` specifies the
 project within that org where these spans are written.
 
 Finally, update both branches of `get_client()` so each `OpenAI` client is

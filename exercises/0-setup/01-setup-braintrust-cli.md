@@ -1,8 +1,6 @@
 # 0.1 Set up the local environment [CLI]
 
-Before you instrument the app, give the Python SDK and the Braintrust CLI the
-credentials they need. The API key determines which Braintrust org receives
-your traces. The project is selected later in code.
+Lets start by setting up this local environment. The API key authorizes this codebase to send traces and create resources within a Braintrust org, using permissions associated with your account in that organization.
 
 ## Step 1: Install the project dependencies
 
@@ -23,13 +21,13 @@ Create a private `.env` file from the template:
 cp example.env .env
 ```
 
-Open `.env` and replace the placeholders. Quote an org name that contains a
-space.
+Open `.env` and replace the placeholders.
 
 ```dotenv
 BRAINTRUST_API_KEY=your-api-key
 BASE_URL=https://gateway.braintrust.dev
 BRAINTRUST_ORG_NAME="your-org-name"
+BRAINTRUST_PROJECT_NAME=learn-bt-<your-name>
 ```
 
 `BRAINTRUST_API_KEY` authenticates both the SDK and the CLI. The SDK uses it to
@@ -59,23 +57,13 @@ You should see the projects in your Braintrust org. This confirms that the key
 in `.env` works. `bt setup` is not needed for this workshop because it manages
 separate CLI profiles and does not fill in the Python app's `.env` file.
 
-## Step 4: Create the course project
-
-Create a dedicated project for the workshop:
-
-```bash
-bt projects create learn-bt --env-file .env
-```
-
-If the project already exists, choose another name, such as
-`learn-bt-<your-name>`, and use it wherever the exercises refer to `learn-bt`.
 
 ## Check your setup
 
 Confirm you have:
 
 - A local `.venv` created by `uv sync`.
-- A private `.env` with a valid API key and org name.
+- A private `.env` with a valid API key, org name, and `BRAINTRUST_PROJECT_NAME`.
 - A `learn-bt` project in your Braintrust org.
 
 If `bt projects list` returns an authentication error, create a new API key in

@@ -13,10 +13,12 @@ to `draft_email` matches the correct email saved in `expected.recipient`.
 Replace the entire file with:
 
 ~~~python
+import os
+
 import braintrust
 from pydantic import BaseModel
 
-project = braintrust.projects.create(name="learn-bt")
+project = braintrust.projects.create(name=os.getenv("BRAINTRUST_PROJECT_NAME"))
 
 
 class EmailScoreParams(BaseModel):
@@ -117,7 +119,8 @@ bt status
 bt functions push evals/scorers.py --env-file .env #--app-url "https://<your-custom-api-url>"
 ~~~
 
-Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
+Note: if this errors with a "slugs already exist" error, add the `--if-exists replace` flag and try again.
+Open your configured project, then select **Scorers**. Confirm that **Recipient matches
 CRM** and **email_quality** appear. Open each and select **Run** on a sample
 trace that contains a `draft_email` span.
 
