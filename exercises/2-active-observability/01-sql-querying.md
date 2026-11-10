@@ -82,8 +82,8 @@ SELECT
   output.output AS response,
   metrics.total_tokens AS tokens,
   metrics.estimated_cost AS estimated_cost
-FROM project_logs('learn-bt')
-WHERE span)attributes.name = 'chat_turn'
+FROM project_logs('learn-bt', shape => 'summary')
+WHERE span.attributes.name = 'chat_turn'
   AND created >= NOW() - INTERVAL 7 DAY
 ORDER BY estimated_cost DESC
 LIMIT 100
