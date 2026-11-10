@@ -65,7 +65,11 @@ def main() -> None:
             secrets=[
                 modal.Secret.from_name(
                     args.secret_name,
-                    required_keys=["BRAINTRUST_API_KEY", "BASE_URL"],
+                    required_keys=[
+                        "BRAINTRUST_API_KEY",
+                        "BRAINTRUST_PROJECT_NAME",
+                        "BASE_URL",
+                    ],
                 )
             ],
             encrypted_ports=[8300],
