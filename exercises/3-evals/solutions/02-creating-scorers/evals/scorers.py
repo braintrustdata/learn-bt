@@ -72,7 +72,10 @@ P: Meets guidelines; ready to use without communication-style edits.
 F: Needs communication-style edits to meet the guidelines.
 
 [Drafted_Email]
-{{{output}}}
+Subject: {{{output.email.subject}}}
+
+Body:
+{{{output.email.body}}}
 """,
     }],
     choice_scores={"P": 1, "F": 0},
