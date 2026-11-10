@@ -70,7 +70,7 @@ async def email_quality(trace, **kwargs):
     if not draft:
         return None
 
-    return email_quality_scorer(output=draft.output["email"])
+    return email_quality_scorer(output=draft.output)
 ~~~
 
 `init_function()` invokes the scorers pushed in exercise 3.2. The recipient

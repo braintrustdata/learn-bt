@@ -31,7 +31,7 @@ async def email_quality(trace, **kwargs):
     if not draft:
         return None
 
-    return email_quality_scorer(output=draft.output["email"])
+    return email_quality_scorer(output=draft.output)
 
 
 def task(input):
