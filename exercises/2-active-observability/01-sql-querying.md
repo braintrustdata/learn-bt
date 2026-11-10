@@ -80,12 +80,13 @@ SELECT
   created,
   input.prompt AS request,
   output.output AS response,
-  metrics.tokens AS tokens,
+  metrics.total_tokens AS tokens,
   metrics.estimated_cost AS estimated_cost
 FROM project_logs('learn-bt')
-WHERE name = 'chat_turn'
+WHERE span)attributes.name = 'chat_turn'
   AND created >= NOW() - INTERVAL 7 DAY
 ORDER BY estimated_cost DESC
+LIMIT 100
 ~~~
 
 Run it, then select **Download** to export a CSV. Each row contains one customer turn's request and response.

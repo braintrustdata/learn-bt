@@ -15,6 +15,7 @@ Open **evals/eval_agent_remote_server.py**. Add these imports and definitions
 below the path setup:
 
 ~~~python
+import os
 import uuid
 
 from braintrust import Eval, init_function
@@ -23,7 +24,7 @@ from pydantic import BaseModel, Field
 from agent.agent import Agent, InputFile
 from agent.config import AgentConfig, DEFAULT_CONFIG
 
-PROJECT = "learn-bt"
+PROJECT = os.getenv("BRAINTRUST_PROJECT_NAME")
 
 
 class MaxToolCallsParam(BaseModel):

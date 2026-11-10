@@ -33,3 +33,5 @@ Open several rows and verify that `expected.recipient` matches the source
 lookup's primary-contact email and differs from the source draft's recipient.
 Keep this dataset unchanged while you
 make the fix. The frozen inputs make the before-and-after experiments comparable.
+
+**Note:** the Loop prompt should create a dataset of 5 rows. If it fails to do so, manually creaet a dataset in Braintrust and import the JSON file at scripts/seed_default/crm-recipient-mismatches.json. 

@@ -1,0 +1,72 @@
+[
+  {
+    "expected": {
+      "recipient": "priya.nair@cobalt.example"
+    },
+    "input": {
+      "prompt": "Hey, can you pull up the account details for Cobalt Robotics (ACC-1004) and draft an email to Priya Nair about our on-prem deployment options? Need it ready for our call tomorrow."
+    },
+    "metadata": {
+      "category": "crm-recipient-mismatch",
+      "label_provenance": "trace-derived",
+      "source_chat_turn_span_id": "18a19a875859933f",
+      "source_trace_id": "75e330c23d50a62a0af415c034458c0e"
+    }
+  },
+  {
+    "expected": {
+      "recipient": "marcus.bell@willowfin.example"
+    },
+    "input": {
+      "prompt": "Can you pull up the account details for Willow Financial (ACC-1005) and draft an email to Marcus Bell regarding the potential renewal risk? Thanks!"
+    },
+    "metadata": {
+      "category": "crm-recipient-mismatch",
+      "label_provenance": "trace-derived",
+      "source_chat_turn_span_id": "0cb201a7d49996e1",
+      "source_trace_id": "b734a8cf7833b7a801d4514c79ae023f"
+    }
+  },
+  {
+    "expected": {
+      "recipient": "alex.chen@brightpeak.example"
+    },
+    "input": {
+      "prompt": "Can you update the CRM for Bright Peak Media (ACC-1003) to note that we need to re-establish contact since the champion changed roles? Also, please draft a quick email to Alex Chen about scheduling a follow-up call."
+    },
+    "metadata": {
+      "category": "crm-recipient-mismatch",
+      "label_provenance": "trace-derived",
+      "source_chat_turn_span_id": "3aebdb89e8b9cacd",
+      "source_trace_id": "56de00c4a62e9b52dec111d6454df837"
+    }
+  },
+  {
+    "expected": {
+      "recipient": "sam.okoro@halcyon.example"
+    },
+    "input": {
+      "prompt": "Can you pull up the Halcyon Health account (ACC-1002) and update the notes field to include that they are evaluating two competitors? Also, draft an email to Sam Okoro to check in on their decision process."
+    },
+    "metadata": {
+      "category": "crm-recipient-mismatch",
+      "label_provenance": "trace-derived",
+      "source_chat_turn_span_id": "9cf1ec9ed42ba02d",
+      "source_trace_id": "051e1895525bfaa63613d4f030efa19d"
+    }
+  },
+  {
+    "expected": {
+      "recipient": "dana.ruiz@northwind.example"
+    },
+    "input": {
+      "prompt": "Can you pull up the account details for Northwind Trading (ACC-1001) and draft an email to Dana Ruiz? I want to confirm the upcoming renewal and discuss any concerns regarding their expansion into the EU."
+    },
+    "metadata": {
+      "category": "crm-recipient-mismatch",
+      "label_provenance": "trace-derived",
+      "source_chat_turn_span_id": "ff3066742ce758eb",
+      "source_trace_id": "511c82b5d5a7b33e4c724fde610454d3"
+    }
+  }
+]

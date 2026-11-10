@@ -1,5 +1,6 @@
 """Remote eval server for the Sales Assistant."""
 
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -12,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent.agent import Agent, InputFile
 from agent.config import AgentConfig, DEFAULT_CONFIG
 
-PROJECT = "learn-bt"
+PROJECT = os.getenv("BRAINTRUST_PROJECT_NAME")
 
 
 class MaxToolCallsParam(BaseModel):

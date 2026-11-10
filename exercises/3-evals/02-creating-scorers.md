@@ -13,10 +13,12 @@ to `draft_email` matches the correct email saved in `expected.recipient`.
 Replace the entire file with:
 
 ~~~python
+import os
+
 import braintrust
 from pydantic import BaseModel
 
-project = braintrust.projects.create(name="learn-bt")
+project = braintrust.projects.create(name=os.getenv("BRAINTRUST_PROJECT_NAME"))
 
 
 class EmailScoreParams(BaseModel):
@@ -93,7 +95,10 @@ P: Meets guidelines; ready to use without communication-style edits.
 F: Needs communication-style edits to meet the guidelines.
 
 [Drafted Email]
-{{{output}}}
+Subject: {{{output.email.subject}}}
+
+Body:
+{{{output.email.body}}}
 """,
     }],
     choice_scores={"P": 1, "F": 0},
@@ -110,14 +115,15 @@ The saved judge maps a model's rating to a pass/fail score and includes an expla
 ## Step 3: Push and inspect both scorers
 
 From the repository root, confirm that the CLI context points to your workshop
-org and **learn-bt**, then push the scorers:
+org and **learn-bt**, then push the scorers. If you are not using the default API url (`api.braintrust.dev`), you must specify the commented out `app-url` flag via `functions push`. See below:
 
 ~~~bash
 bt status
-bt functions push evals/scorers.py --env-file .env
+bt functions push evals/scorers.py --env-file .env #--app-url "https://<your-custom-api-url>"
 ~~~
 
-Open **learn-bt**, then select **Scorers**. Confirm that **Recipient matches
+Note: if this errors with a "slugs already exist" error, add the `--if-exists replace` flag and try again.
+Open your configured project, then select **Scorers**. Confirm that **Recipient matches
 CRM** and **email_quality** appear. Open each and select **Run** on a sample
 trace that contains a `draft_email` span.
 

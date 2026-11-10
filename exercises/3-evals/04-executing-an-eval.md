@@ -13,11 +13,13 @@ Open **evals/eval_agent.py**.
 Below the path setup, add:
 
 ~~~python
+import os
+
 from braintrust import Eval, init_dataset, init_function
 
 from agent.agent import Agent, InputFile
 
-PROJECT = "learn-bt"
+PROJECT = os.getenv("BRAINTRUST_PROJECT_NAME")
 DATASET = "crm-recipient-mismatches"
 ~~~
 

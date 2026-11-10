@@ -1,7 +1,9 @@
+import os
+
 import braintrust
 from pydantic import BaseModel
 
-project = braintrust.projects.create(name="learn-bt")
+project = braintrust.projects.create(name=os.getenv("BRAINTRUST_PROJECT_NAME"))
 
 
 class EmailScoreParams(BaseModel):
@@ -70,7 +72,10 @@ P: Meets guidelines; ready to use without communication-style edits.
 F: Needs communication-style edits to meet the guidelines.
 
 [Drafted_Email]
-{{{output}}}
+Subject: {{{output.email.subject}}}
+
+Body:
+{{{output.email.body}}}
 """,
     }],
     choice_scores={"P": 1, "F": 0},
