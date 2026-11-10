@@ -1,5 +1,6 @@
 """Eval for the Sales Assistant."""
 
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -10,7 +11,7 @@ from braintrust import Eval, init_dataset, init_function
 
 from agent.agent import Agent, InputFile
 
-PROJECT = "learn-bt"
+PROJECT = os.getenv("BRAINTRUST_PROJECT_NAME")
 DATASET = "crm-recipient-mismatches"
 
 
@@ -30,7 +31,7 @@ async def email_quality(trace, **kwargs):
     if not draft:
         return None
 
-    return email_quality_scorer(output=draft.output["email"])
+    return email_quality_scorer(output=draft.output)
 
 
 def task(input):

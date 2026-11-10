@@ -1,5 +1,6 @@
 """Remote eval server for the Sales Assistant."""
 
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -12,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent.agent import Agent, InputFile
 from agent.config import AgentConfig, DEFAULT_CONFIG
 
-PROJECT = "learn-bt"
+PROJECT = os.getenv("BRAINTRUST_PROJECT_NAME")
 
 
 class MaxToolCallsParam(BaseModel):
@@ -54,7 +55,7 @@ async def email_quality(trace, **kwargs):
     if not draft:
         return None
 
-    return email_quality_scorer(output=draft.output["email"])
+    return email_quality_scorer(output=draft.output)
 
 
 def task(input, hooks):

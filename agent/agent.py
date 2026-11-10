@@ -21,7 +21,7 @@ from . import tools
 from .config import DEFAULT_CONFIG, AgentConfig
 
 load_dotenv()
-braintrust.init_logger(project="learn-bt")
+braintrust.init_logger(project=os.getenv("BRAINTRUST_PROJECT_NAME"))
 
 
 class AgentError(RuntimeError):
